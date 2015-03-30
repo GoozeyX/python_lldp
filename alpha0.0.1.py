@@ -18,23 +18,35 @@ while True:
     if ethernetHeaderProtocol != '\x88\xCC':
         continue
     #[0] at the end of the unpack is because of the tuple returnvalue
+    # !H unpacks as an unsigned short, which has a size of two bytes, which is what we need because the TLV "header" is 9 and 7 bits long (2bytes)
     tlv_header = struct.unpack("!H", lldpPayload[:2])[0]
-    tlv_type = (tlv_header & 0xfe00) >> 9
+    tlv_type = tlv_header >> 9 #this shifts away the length part of the TLV leaving us with just the type
     tlv_len = (tlv_header & 0x01ff)
-    tlv_payload = lldpPayload[2:tlv_len + 2]
-    # print tlvtype
-    # print tlvdata
-    tlv_oui = None
-    tlv_subtype = None
-    if tlv_type == 0x7f:
-        _tlv_oui = unpack("!BBB", tlv_payload[:3])
-        tlv_subtype = unpack("!B", tlv_payload[3:3 + 1])[0]
-        tlv_payload = tlv_payload[3 + 1:]
-
-    print _tlv_oui
-    print tlv_type
+    tlv_payload = lldpPayload[2:tlv_len]
+    tlv_subtype = struct.unpack("!B", tlv_payload[0:1]) #tlv_payload in this case is 3 & 4 byte of the tlv structure
+    tlv_datafield = tlv_payload[1:tlv_len]
+    print "now printing tlv_subtype: \n"
     print tlv_subtype
-    print tlv_payload
+    # if tlv_type == 0x7f:
+    #     _tlv_oui = unpack("!BBB", tlv_payload[:3])
+    #     tlv_subtype = unpack("!B", tlv_payload[3:3 + 1])[0]
+    #     tlv_payload = tlv_payload[3 + 1:]
+    # print tlv_header
+    print "Now printing TLV Type: "
+    print tlv_type
+    print "Now printing TLV Payload: "
+    print tlv_payload[1:tlv_len] # this is because we already moved the beginning when we set the payload
+    print "\nnow printing hexlify on tlv_payload:\n"
+    print binascii.hexlify(tlv_payload[1:tlv_len])
+    print "Now Printing tlv len: \n"
+    print tlv_len
+
+    print "Printing tlv_datafield:\n"
+    print tlv_datafield
+    print binascii.hexlify(tlv_datafield)
+    # print tlv_type
+    # print tlv_subtype
+    # print tlv_payload
 
 
     # print lldp_tlv_header
