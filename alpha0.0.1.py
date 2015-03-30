@@ -17,52 +17,42 @@ while True:
 
     if ethernetHeaderProtocol != '\x88\xCC':
         continue
+    while lldpPayload:
     #[0] at the end of the unpack is because of the tuple returnvalue
     # !H unpacks as an unsigned short, which has a size of two bytes, which is what we need because the TLV "header" is 9 and 7 bits long (2bytes)
-    tlv_header = struct.unpack("!H", lldpPayload[:2])[0] # This is the first two bytes of the TLV Data
-    tlv_type = tlv_header >> 9 #this shifts away the length part of the TLV leaving us with just the type
-    tlv_len = (tlv_header & 0x01ff) # This gives us the length of the real payload by masking the first 7 bits with a 0000000111111111 mask (equals 0x01ff)
-    tlv_TotalPayload = lldpPayload[2:tlv_len + 2]
-    tlv_subtype = struct.unpack("!B", tlv_TotalPayload[0:1]) #tlv_TotalPayload in this case is 3 & 4 byte of the tlv structure (using !H because its a 2 byte size unsigned Short)
-    tlv_datafield = tlv_TotalPayload[1:tlv_len] #we need to add +2 because the address space changes when we cut off the header ( see http://standards.ieee.org/getieee802/download/802.1AB-2009.pdf page 24)
-    print "Now printing TLV Type: ",
-    print tlv_type
+        tlv_header = struct.unpack("!H", lldpPayload[:2])[0] # This is the first two bytes of the TLV Data
+        tlv_type = tlv_header >> 9 #this shifts away the length part of the TLV leaving us with just the type
+        tlv_len = (tlv_header & 0x01ff) # This gives us the length of the real payload by masking the first 7 bits with a 0000000111111111 mask (equals 0x01ff)
+        tlv_TotalPayload = lldpPayload[2:tlv_len + 2]
+        tlv_subtype = struct.unpack("!B", tlv_TotalPayload[0:1]) #tlv_TotalPayload in this case is 3 & 4 byte of the tlv structure (using !H because its a 2 byte size unsigned Short)
+        tlv_datafield = tlv_TotalPayload[1:tlv_len] #we need to add +2 because the address space changes when we cut off the header ( see http://standards.ieee.org/getieee802/download/802.1AB-2009.pdf page 24)
+        print "Now printing TLV Type: ",
+        print tlv_type
 
-    print "Now Printing tlv len in bytes: \n",
-    print tlv_len
+        print "Now Printing tlv len in bytes: \n",
+        print tlv_len
 
-    print "now printing tlv_subtype: \n"
-    print tlv_subtype[0]
+        print "now printing tlv_subtype: \n"
+        print tlv_subtype[0]
 
+        print "Now printing tlv_datafield: \n"
+        print tlv_datafield #this is useless because its in binary.
 
-    print "Now printing tlv_datafield: \n"
-    print tlv_datafield
+        print "Printing tlv_datafield with binascii:\n"
+        print binascii.hexlify(tlv_datafield)
 
-    print "Printing tlv_datafield with binascii:\n"
-    print binascii.hexlify(tlv_datafield)
-    # print "Now printing TLV Payload: "
-    # print tlv_TotalPayload[1:tlv_len] # this is because we already moved the beginning when we set the payload
-    # print "\nnow printing hexlify on tlv_TotalPayload:\n"
-    # print binascii.hexlify(tlv_TotalPayload[1:tlv_len])
-    # print "Now Printing tlv len: \n"
-    # print tlv_len
-
-    # print tlv_type
-    # print tlv_subtype
-    # print tlv_payload
+        lldpPayload = lldpPayload[2 + tlv_len:]
 
 
-    # print lldp_tlv_header
-    # print binascii.hexlify(lldp_tlv_header)
 
     # if tlv_type == 0x7f:
     #     _tlv_oui = unpack("!BBB", tlv_TotalPayload[:3])
     #     tlv_subtype = unpack("!B", tlv_TotalPayload[3:3 + 1])[0]
     #     tlv_TotalPayload = tlv_TotalPayload[3 + 1:]
     # print tlv_header
-    print "****************_ETHERNET_FRAME_****************"
-    print "Type:            ", binascii.hexlify(ethernetHeaderProtocol)
-    print "************************************************"
+    # print "****************_ETHERNET_FRAME_****************"
+    # print "Type:            ", binascii.hexlify(ethernetHeaderProtocol)
+    # print "************************************************"
 
 # from: https://github.com/openstack/ironic-python-agent/blob/master/ironic_python_agent/netutils.py
 # tlvhdr = struct.unpack('!H', buff[:2])[0]
