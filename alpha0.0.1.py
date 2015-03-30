@@ -24,6 +24,7 @@ while True:
         tlv_type = tlv_header >> 9 #this shifts away the length part of the TLV leaving us with just the type
         tlv_len = (tlv_header & 0x01ff) # This gives us the length of the real payload by masking the first 7 bits with a 0000000111111111 mask (equals 0x01ff)
         tlv_TotalPayload = lldpPayload[2:tlv_len + 2]
+        #if tlvtype is 4 then datafield must start at 0 because i said so
         tlv_subtype = struct.unpack("!B", tlv_TotalPayload[0:1]) #tlv_TotalPayload in this case is 3 & 4 byte of the tlv structure (using !H because its a 2 byte size unsigned Short)
         tlv_datafield = tlv_TotalPayload[1:tlv_len] #we need to add +2 because the address space changes when we cut off the header ( see http://standards.ieee.org/getieee802/download/802.1AB-2009.pdf page 24)
         print "Now printing TLV Type: ",
