@@ -33,7 +33,6 @@ while True:
         tlv_subtype = "" if tlv_type is 4 else struct.unpack("!B", tlv_TotalPayload[0:1])
         startbyte = 0 if tlv_type is 4 else 1
         #tlv_subtype = struct.unpack("!B", tlv_TotalPayload[0:1]) #tlv_TotalPayload in this case is 3 & 4 byte of the tlv structure (using !H because its a 2 byte size unsigned Short)
-
         tlv_datafield = tlv_TotalPayload[startbyte:tlv_len]
 
         #Data Gathering
@@ -87,6 +86,13 @@ while True:
 # +----------+-----------------+------------+--------------+
 # | 7 bits   | 9 bits          | 1 byte     | 0-511 Octets |
 # +----------+-----------------+------------+--------------+
+
+# TLV Type 127 Frames
+# +----------+-----------------+---------+---------+--------------------+
+# | TLV Type | TLV information |   OUI   | subtype | Information string |
+# +----------+-----------------+---------+---------+--------------------+
+# | 7 bit    | 9 bit           | 3 bytes | 1 byte  | 0-507bytes         |
+# +----------+-----------------+---------+---------+--------------------+
 
 # from: https://github.com/openstack/ironic-python-agent/blob/master/ironic_python_agent/netutils.py
 # tlvhdr = struct.unpack('!H', buff[:2])[0]
