@@ -24,15 +24,17 @@ while True:
     #The bitmask gives us the length of the real payload by masking the first 7 bits with a 0000000111111111 mask (0x01ff in hex)
     #tlv_TotalPayload is the 3rd-Nth byte of the TLV Frame
     #tlv_TotalPayload: we need to add +2 bytes because the address space changes when we cut off the header ( see http://standards.ieee.org/getieee802/download/802.1AB-2009.pdf page 24)
+    #if tlvtype is 4 then datafield must start at 0 because of the payload structure for Port Descriptions (see IEEE PDF)
         tlv_header = struct.unpack("!H", lldpPayload[:2])[0]
         tlv_type = tlv_header >> 9
         tlv_len = (tlv_header & 0x01ff)
+
+        if tlv_type == 127:
+            # dospecialstuff here
+        else: #for regular tlv types 1-126
         tlv_TotalPayload = lldpPayload[2:tlv_len + 2]
-        
-        #if tlvtype is 4 then datafield must start at 0 because of the payload structure for Port Descriptions (see IEEE PDF)
         tlv_subtype = "" if tlv_type is 4 else struct.unpack("!B", tlv_TotalPayload[0:1])
         startbyte = 0 if tlv_type is 4 else 1
-        #tlv_subtype = struct.unpack("!B", tlv_TotalPayload[0:1]) #tlv_TotalPayload in this case is 3 & 4 byte of the tlv structure (using !H because its a 2 byte size unsigned Short)
         tlv_datafield = tlv_TotalPayload[startbyte:tlv_len]
 
         #Data Gathering
@@ -72,6 +74,20 @@ while True:
 #     print binascii.hexlify(data)
 #     print type(data)
 #     print data[0:14]
+
+# import os
+# import sys
+# import binascii
+# with open("output_tcpdump.alex") as f:
+#     f.seek(40)
+#     data = f.read()
+
+#     #print data
+#     print binascii.hexlify(data)
+#     print type(data)
+#     print binascii.hexlify(data[0:14])
+
+
 
 #Ethernet Frame
 # +----------+------------+-----------+-----------+-----+
