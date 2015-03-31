@@ -22,20 +22,23 @@ while True:
     #!H unpacks as an unsigned short, which has a size of two bytes, which is what we need because the TLV "header" is 9 and 7 bits long (2bytes)
     #The right bitshift by 9 bits shifts away the length part of the TLV, leaving us with the TLV Type
     #The bitmask gives us the length of the real payload by masking the first 7 bits with a 0000000111111111 mask (0x01ff in hex)
-    #tlv_TotalPayload is the 3rd-Nth byte of the TLV Frame
-    #tlv_TotalPayload: we need to add +2 bytes because the address space changes when we cut off the header ( see http://standards.ieee.org/getieee802/download/802.1AB-2009.pdf page 24)
+    #lldpDU is the 3rd-Nth byte of the TLV Frame
+    #lldpDU: we need to add +2 bytes because the address space changes when we cut off the header ( see http://standards.ieee.org/getieee802/download/802.1AB-2009.pdf page 24)
     #if tlvtype is 4 then datafield must start at 0 because of the payload structure for Port Descriptions (see IEEE PDF)
         tlv_header = struct.unpack("!H", lldpPayload[:2])[0]
         tlv_type = tlv_header >> 9
         tlv_len = (tlv_header & 0x01ff)
+        lldpDU = lldpPayload[2:tlv_len + 2]
 
         if tlv_type == 127:
-            # dospecialstuff here
-        else: #for regular tlv types 1-126
-        tlv_TotalPayload = lldpPayload[2:tlv_len + 2]
-        tlv_subtype = "" if tlv_type is 4 else struct.unpack("!B", tlv_TotalPayload[0:1])
-        startbyte = 0 if tlv_type is 4 else 1
-        tlv_datafield = tlv_TotalPayload[startbyte:tlv_len]
+            tlv_oui = struct.unpack("!BBB", lldpDU[:3])
+            tlv_subtype = struct.unpack("!B", lldpDU[3:4])
+            tlv_datafield = lldpDU[4:tlv_len]
+        #for regular tlv types 1-126
+        else:
+            tlv_subtype = "" if tlv_type is 4 else struct.unpack("!B", lldpDU[0:1])
+            startbyte = 0 if tlv_type is 4 else 1
+            tlv_datafield = lldpDU[startbyte:tlv_len]
 
         #Data Gathering
 
@@ -56,9 +59,9 @@ while True:
 # if subtype for tlvstuffz = '\x00\x80\xC2\x01' then the next two bytes will contain the VLAN ID which needs to be performed using an unpack with !H
 
     # if tlv_type == 0x7f:
-    #     _tlv_oui = unpack("!BBB", tlv_TotalPayload[:3])
-    #     tlv_subtype = unpack("!B", tlv_TotalPayload[3:3 + 1])[0]
-    #     tlv_TotalPayload = tlv_TotalPayload[3 + 1:]
+    #     _tlv_oui = unpack("!BBB", lldpDU[:3])
+    #     tlv_subtype = unpack("!B", lldpDU[3:3 + 1])[0]
+    #     lldpDU = lldpDU[3 + 1:]
     # print tlv_header
     # print "****************_ETHERNET_FRAME_****************"
     # print "Type:            ", binascii.hexlify(ethernetHeaderProtocol)
