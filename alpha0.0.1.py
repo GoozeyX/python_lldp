@@ -22,21 +22,28 @@ while True:
     #!H unpacks as an unsigned short, which has a size of two bytes, which is what we need because the TLV "header" is 9 and 7 bits long (2bytes)
     #The right bitshift by 9 bits shifts away the length part of the TLV, leaving us with the TLV Type
     #The bitmask gives us the length of the real payload by masking the first 7 bits with a 0000000111111111 mask (0x01ff in hex)
-    #
+    #tlv_TotalPayload is the 3rd-Nth byte of the TLV Frame
+    #tlv_TotalPayload: we need to add +2 bytes because the address space changes when we cut off the header ( see http://standards.ieee.org/getieee802/download/802.1AB-2009.pdf page 24)
         tlv_header = struct.unpack("!H", lldpPayload[:2])[0]
         tlv_type = tlv_header >> 9
         tlv_len = (tlv_header & 0x01ff)
         tlv_TotalPayload = lldpPayload[2:tlv_len + 2]
+        
         #if tlvtype is 4 then datafield must start at 0 because of the payload structure for Port Descriptions (see IEEE PDF)
-    #tlv_TotalPayload in this case is the 3rd-Nth byte of the tlv frame. 
-        tlv_subtype = struct.unpack("!B", tlv_TotalPayload[0:1]) #tlv_TotalPayload in this case is 3 & 4 byte of the tlv structure (using !H because its a 2 byte size unsigned Short)
-        tlv_datafield = tlv_TotalPayload[1:tlv_len] #we need to add +2 because the address space changes when we cut off the header ( see http://standards.ieee.org/getieee802/download/802.1AB-2009.pdf page 24)
+        tlv_subtype = "" if tlv_type is 4 else struct.unpack("!B", tlv_TotalPayload[0:1])
+        startbyte = 0 if tlv_type is 4 else 1
+        #tlv_subtype = struct.unpack("!B", tlv_TotalPayload[0:1]) #tlv_TotalPayload in this case is 3 & 4 byte of the tlv structure (using !H because its a 2 byte size unsigned Short)
+
+        tlv_datafield = tlv_TotalPayload[startbyte:tlv_len]
+
+        #Data Gathering
+
         print "Now printing TLV Type: ",
         print tlv_type
         print "Now Printing tlv len in bytes: \n",
         print tlv_len
         print "now printing tlv_subtype: \n"
-        print tlv_subtype[0]
+        # print tlv_subtype[0] (commenting this out because type 4 isnt a tuple)
         print "Now printing tlv_datafield: \n"
         print tlv_datafield #this is useless because its in binary.
         print "Printing tlv_datafield with binascii:\n"
