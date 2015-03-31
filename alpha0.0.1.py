@@ -2,7 +2,7 @@ import os
 import socket
 import struct
 import binascii
-from subprocess
+import subprocess
 import re
 
 ETH_P_ALL = 0x0003
@@ -15,7 +15,7 @@ while True:
     lldpPayload = packet[14:]
     ethernetHeaderTotal = packet[0:14]
 
-    ethernetHeaderUnpacked = struct.unpack("!6s6s2s",ethernetHeaderTotal)
+    ethernetHeaderUnpacked = struct.unpack("!6s6s2s", ethernetHeaderTotal)
     ethernetHeaderProtocol = ethernetHeaderUnpacked[2]
 
     if ethernetHeaderProtocol != '\x88\xCC':
@@ -59,14 +59,34 @@ while True:
         # This moves on to the next TLV
         lldpPayload = lldpPayload[2 + tlv_len:]
 
+
 def get_linux_interfacenames():
     interface_list = os.listdir("/sys/class/net")
     return interface_list
+
 
 def get_aix_interfacenames():
     output = subprocess.Popen("lsdev -l ent\*", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0]
     interface_list = re.findall(r"^(ent?\d*).*$", str(output), re.M)
     return interface_list
+
+def run_snoop(interface_list):
+    pass
+
+def run_tcpdumpaix(interface_list):
+    pass
+
+def parse_snoopdump():
+    import thread
+
+    with open("output_tcpdump.alex") as f:
+        f.seek(40)
+        data = f.read()
+
+        #print data
+        print binascii.hexlify(data)
+        print type(data)
+        print binascii.hexlify(data[0:14])
 
 # if subtype for tlvstuffz = '\x00\x80\xC2\x01' then the next two bytes will contain the VLAN ID which needs to be performed using an unpack with !H
 
@@ -78,6 +98,7 @@ def get_aix_interfacenames():
     # print "****************_ETHERNET_FRAME_****************"
     # print "Type:            ", binascii.hexlify(ethernetHeaderProtocol)
     # print "************************************************"
+
 # import os
 # import sys
 # import binascii
