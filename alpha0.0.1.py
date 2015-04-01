@@ -7,12 +7,17 @@ import re
 import fcntl
 import ctypes
 import signal
+import thread
 
 ETH_P_ALL = 0x0003
 IFF_PROMISC = 0x100
 SIOCGIFFLAGS = 0x8913
 SIOCSIFFLAGS = 0x8914
 
+def get_operatingsystem_type():
+    """Get Operating system type so that we can choose which method to use to get the LLDP data"""
+    osname = subprocess.Popen("uname", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0].strip()
+    return osname
 class ifreq(ctypes.Structure):
     _fields_ = [("ifr_ifrn", ctypes.c_char * 16),
                 ("ifr_flags", ctypes.c_short)]
@@ -59,11 +64,9 @@ def run_linux_socket(interface, max_capture_time):
 
         if ethernetHeaderProtocol != '\x88\xCC':
             continue
-        a, b, c, d = parse_lldp_packet_frames(lldpPayload)
-        print a
-        print b
-        print c
-        print d
+        VLAN_ID, Switch_Name, Port_Description, Ethernet_Port_Id = parse_lldp_packet_frames(lldpPayload)
+        break
+    return VLAN_ID, Switch_Name, Port_Description, Ethernet_Port_Id
 def parse_lldp_packet_frames(lldpPayload):
     Switch_Name = None
     VLAN_ID = None
@@ -98,7 +101,6 @@ def parse_lldp_packet_frames(lldpPayload):
             startbyte = 0 if tlv_type is 4 else 1
             tlv_datafield = lldpDU[startbyte:tlv_len]
 
-
         if tlv_type == 4:
             Port_Description = tlv_datafield
         elif tlv_type == 2:
@@ -121,7 +123,7 @@ def get_linux_interfacenames():
 
 
 def get_aix_interfacenames():
-    output = subprocess.Popen("lsdev -l ent\*", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0]
+    output = subprocess.Popen("lsdev -l en\*", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0]
     interface_list = re.findall(r"^(ent?\d*).*$", str(output), re.M)
     return interface_list
 
