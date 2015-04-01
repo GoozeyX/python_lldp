@@ -37,6 +37,9 @@ def promiscuous_mode(interface, sock, enable=False):
     fcntl.ioctl(sock.fileno(), SIOCSIFFLAGS, ifr)
 
 def run_linux_socket(interface):
+    
+
+
     rawSocket = socket.socket(17, socket.SOCK_RAW, socket.htons(0x0003))
     rawSocket.bind((interface, ETH_P_ALL))
 
@@ -52,9 +55,14 @@ def run_linux_socket(interface):
 
         if ethernetHeaderProtocol != '\x88\xCC':
             continue
-        parse_lldp_packet_frames(lldpPayload)
+        a, b, c, d = parse_lldp_packet_frames(lldpPayload)
 
 def parse_lldp_packet_frames(lldpPayload):
+
+    # Switch_Name = None
+    # VLAN_Id = None
+    # Port_Description = None
+    # Ethernet_Port_Id = None
 
     while lldpPayload:
     #[0] at the end of the unpack is because of the tuple returnvalue
@@ -64,7 +72,6 @@ def parse_lldp_packet_frames(lldpPayload):
     #lldpDU is the 3rd-Nth byte of the TLV Frame
     #lldpDU: we need to add +2 bytes because the address space changes when we cut off the header ( see http://standards.ieee.org/getieee802/download/802.1AB-2009.pdf page 24)
     #if tlvtype is 4 then datafield must start at 0 because of the payload structure for Port Descriptions (see IEEE PDF)
-        tlv_vlan = None
         tlv_header = struct.unpack("!H", lldpPayload[:2])[0]
         tlv_type = tlv_header >> 9
         tlv_len = (tlv_header & 0x01ff)
@@ -74,7 +81,7 @@ def parse_lldp_packet_frames(lldpPayload):
             tlv_subtype = lldpDU[3:4]
             tlv_datafield = lldpDU[4:tlv_len]
             if tlv_oui == "\x00\x80\xC2" and tlv_subtype == "\x01":
-                tlv_vlan = struct.unpack("!H", tlv_datafield)
+                VLAN_ID = struct.unpack("!H", tlv_datafield)
 
         elif tlv_type == 0:
             print "TLV Type is ZERO, Breaking the while loop"
@@ -85,10 +92,20 @@ def parse_lldp_packet_frames(lldpPayload):
             startbyte = 0 if tlv_type is 4 else 1
             tlv_datafield = lldpDU[startbyte:tlv_len]
 
+        if tlv_subtype == 4:
+            Port_Description = tlv_datafield
+        elif tlv_subtype == 2:
+            Ethernet_Port_Id = tlv_datafield
+        elif tlv_subtype == 5:
+            Switch_Name = tlv_datafield
+        else:
+            pass
 
 
         lldpPayload = lldpPayload[2 + tlv_len:]
     break
+
+    return VLAN_ID, Switch_Name, Port_Description, Ethernet_Port_Id
 
 def get_linux_interfacenames():
     interface_list = os.listdir("/sys/class/net")
