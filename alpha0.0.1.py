@@ -36,14 +36,15 @@ def promiscuous_mode(interface, sock, enable=False):
     ifr.ifr_flags |= IFF_PROMISC
     fcntl.ioctl(sock.fileno(), SIOCSIFFLAGS, ifr)
 
-def run_linux_socket(interface):
+def run_linux_socket(interface, max_capture_time):
     
-
-
     rawSocket = socket.socket(17, socket.SOCK_RAW, socket.htons(0x0003))
     rawSocket.bind((interface, ETH_P_ALL))
 
     promiscuous_mode(interface, rawSocket, True)
+    signal.signal(signal.SIGINT, exit_handler)
+    signal.signal(signal.SIGALRM, exit_handler)
+    signal.alarm(max_capture_time)
     while True:
         packet = rawSocket.recvfrom(65565)
         packet = packet[0]
@@ -57,12 +58,7 @@ def run_linux_socket(interface):
             continue
         a, b, c, d = parse_lldp_packet_frames(lldpPayload)
 
-def parse_lldp_packet_frames(lldpPayload):
-
-    # Switch_Name = None
-    # VLAN_Id = None
-    # Port_Description = None
-    # Ethernet_Port_Id = None
+def parse_lldp_packet_frames(lldpPayload, interfacename=None, capture_sock=None):
 
     while lldpPayload:
     #[0] at the end of the unpack is because of the tuple returnvalue
@@ -101,15 +97,20 @@ def parse_lldp_packet_frames(lldpPayload):
         else:
             pass
 
-
         lldpPayload = lldpPayload[2 + tlv_len:]
-    break
+
+        promiscuous_mode(interfacename, capture_sock, False)
+        signal.signal(signal.SIGINT, signal.SIG_DFL)
+        signal.signal(signal.SIGALRM, signal.SIG_DFL)
+        signal.alarm(0)
 
     return VLAN_ID, Switch_Name, Port_Description, Ethernet_Port_Id
 
 def get_linux_interfacenames():
-    interface_list = os.listdir("/sys/class/net")
-    return interface_list
+    # commenting this out for demo tests
+    # interface_list = os.listdir("/sys/class/net")
+    # return interface_list
+    return ["eth0"]
 
 
 def get_aix_interfacenames():
@@ -134,6 +135,13 @@ def parse_snoopdump():
         print binascii.hexlify(data)
         print type(data)
         print binascii.hexlify(data[0:14])
+
+def main():
+    max_capture_time = 90
+    networkname_list = get_linux_interfacenames()
+
+    for interface in networkname_list:
+        run_linux_socket(interface, max_capture_time)
 
 
 # import os
