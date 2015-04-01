@@ -33,7 +33,10 @@ def promiscuous_mode(interface, sock, enable=False):
     ifr = ifreq()
     ifr.ifr_ifrn = interface
     fcntl.ioctl(sock.fileno(), SIOCGIFFLAGS, ifr)
-    ifr.ifr_flags |= IFF_PROMISC
+    if enable:
+        ifr.ifr_flags |= IFF_PROMISC
+    else:
+        ifr.ifr_flags &= ~IFF_PROMISC
     fcntl.ioctl(sock.fileno(), SIOCSIFFLAGS, ifr)
 
 def run_linux_socket(interface, max_capture_time):
@@ -57,8 +60,15 @@ def run_linux_socket(interface, max_capture_time):
         if ethernetHeaderProtocol != '\x88\xCC':
             continue
         a, b, c, d = parse_lldp_packet_frames(lldpPayload)
-
+        print a
+        print b
+        print c
+        print d
 def parse_lldp_packet_frames(lldpPayload):
+    Switch_Name = None
+    VLAN_ID = None
+    Ethernet_Port_Id = None
+    Port_Description = None
 
     while lldpPayload:
     #[0] at the end of the unpack is because of the tuple returnvalue
@@ -83,16 +93,17 @@ def parse_lldp_packet_frames(lldpPayload):
             print "TLV Type is ZERO, Breaking the while loop"
             break
         else: 
-            print tlv_type
+            # print tlv_type
             tlv_subtype = "" if tlv_type is 4 else struct.unpack("!B", lldpDU[0:1])
             startbyte = 0 if tlv_type is 4 else 1
             tlv_datafield = lldpDU[startbyte:tlv_len]
 
-        if tlv_subtype == 4:
+
+        if tlv_type == 4:
             Port_Description = tlv_datafield
-        elif tlv_subtype == 2:
+        elif tlv_type == 2:
             Ethernet_Port_Id = tlv_datafield
-        elif tlv_subtype == 5:
+        elif tlv_type == 5:
             Switch_Name = tlv_datafield
         else:
             pass
@@ -189,43 +200,3 @@ if __name__ == '__main__':
 # +----------+-----------------+---------+---------+--------------------+
 # | 7 bit    | 9 bit           | 3 bytes | 1 byte  | 0-507bytes         |
 # +----------+-----------------+---------+---------+--------------------+
-
-# from: https://github.com/openstack/ironic-python-agent/blob/master/ironic_python_agent/netutils.py
-# tlvhdr = struct.unpack('!H', buff[:2])[0]
-# tlvtype = (tlvhdr & 0xfe00) >> 9
-# tlvlen = (tlvhdr & 0x01ff)
-# tlvdata = buff[2:tlvlen + 2]
-# buff = buff[tlvlen + 2:]
-# lldp_info.append((tlvtype, tlvdata))
-# return lldp_info
-
-# # LLDP Length:
-# LLDP_TLV_TYPE_BIT_LEN = 7
-# LLDP_TLV_LEN_BIT_LEN = 9
-# LLDP_TLV_HEADER_LEN = 2         # 7 + 9 = 16
-# LLDP_TLV_OUI_LEN = 3
-# LLDP_TLV_SUBTYPE_LEN = 1
-# # LLDP Protocol BitFiddling Mask:
-# LLDP_TLV_TYPE_MASK = 0xfe00
-# LLDP_TLV_LEN_MASK = 0x1ff
-# # LLDP Protocol ID:
-# LLDP_PROTO_ID = 0x88cc
-# # LLDP TLV Type:
-# LLDP_TLV_TYPE_CHASSISID = 0x01
-# LLDP_TLV_TYPE_PORTID = 0x02
-# LLDP_TLV_DEVICE_NAME = 0x05
-# LLDP_PDUEND = 0x00
-# LLDP_TLV_ORGANIZATIONALLY_SPECIFIC = 0x7f
-# # LLDP TLV OUI Type:
-# LLDP_TLV_OUI_802_1 = 0x0008c2
-# LLDP_TLV_OUI_802_3 = 0x00120f
-
-# ## Magic string for unpack packet:
-# UNPACK_ETH_HEADER_DEST = '!%s' % ('B' * ETH_ALEN)
-# UNPACK_ETH_HEADER_SRC = '!%s' % ('B' * ETH_ALEN)
-# UNPACK_ETH_HEADER_PROTO = '!H'
-
-# ## Magic string for unpack LLDP packet:
-# UNPACK_LLDP_TLV_TYPE = '!H'
-# UNPACK_LLDP_TLV_OUI = '!%s' % ('B' * LLDP_TLV_OUI_LEN)
-# UNPACK_LLDP_TLV_SUBTYPE = '!B'
