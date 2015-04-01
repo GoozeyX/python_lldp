@@ -20,11 +20,11 @@ class ifreq(ctypes.Structure):
 def exit_handler(signum, frame):
     """ Exit signal handler """
 
-    capture_sock = frame.f_locals['capture_sock']
-    interface_name = frame.f_locals['interface_name']
+    rawSocket = frame.f_locals['rawSocket']
+    interface = frame.f_locals['interface']
 
-    promiscuous_mode(interface_name, capture_sock, False)
-    print("Abort, %s exit promiscuous mode." % interface_name)
+    promiscuous_mode(interface, rawSocket, False)
+    print("Abort, %s exit promiscuous mode." % interface)
 
     sys.exit(1)
 
@@ -58,7 +58,7 @@ def run_linux_socket(interface, max_capture_time):
             continue
         a, b, c, d = parse_lldp_packet_frames(lldpPayload)
 
-def parse_lldp_packet_frames(lldpPayload, interfacename=None, capture_sock=None):
+def parse_lldp_packet_frames(lldpPayload):
 
     while lldpPayload:
     #[0] at the end of the unpack is because of the tuple returnvalue
@@ -99,10 +99,6 @@ def parse_lldp_packet_frames(lldpPayload, interfacename=None, capture_sock=None)
 
         lldpPayload = lldpPayload[2 + tlv_len:]
 
-        promiscuous_mode(interfacename, capture_sock, False)
-        signal.signal(signal.SIGINT, signal.SIG_DFL)
-        signal.signal(signal.SIGALRM, signal.SIG_DFL)
-        signal.alarm(0)
 
     return VLAN_ID, Switch_Name, Port_Description, Ethernet_Port_Id
 
@@ -144,6 +140,9 @@ def main():
         run_linux_socket(interface, max_capture_time)
 
 
+
+if __name__ == '__main__':
+    main()
 # import os
 # import sys
 # import binascii
