@@ -70,7 +70,7 @@ def promiscuous_mode(interface, sock, enable=False):
     fcntl.ioctl(sock.fileno(), SIOCSIFFLAGS, ifr)
 
 def evaluate_linux(interface, max_capture_time):
-    
+    print "inside thread now"
     rawSocket = socket.socket(17, socket.SOCK_RAW, socket.htons(0x0003))
     rawSocket.bind((interface, ETH_P_ALL))
 
@@ -174,9 +174,16 @@ def main():
     networkname_list = get_networklist()
     os_name = get_networklist(osnameonly=True)
 
+    evaluate_Function = {
+        'Linux': evaluate_linux,
+        'AIX': evaluate_aix,
+    }
+
+    func = evaluate_Function[os_name]
     for interface in networkname_list:
-        thread.start_new_thread(evaluate_linux, (interface, max_capture_time))
-        run_linux_socket(interface, max_capture_time)
+        # thread.start_new_thread(evaluate_Function[os_name], (interface, max_capture_time))
+        evaluate_linux(interface, max_capture_time)
+        # run_linux_socket(interface, max_capture_time)
 
 
 
