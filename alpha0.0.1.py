@@ -7,7 +7,8 @@ import re
 import fcntl
 import ctypes
 import signal
-import thread
+import threading
+from threading import Thread
 
 ETH_P_ALL = 0x0003
 IFF_PROMISC = 0x100
@@ -69,6 +70,7 @@ def promiscuous_mode(interface, sock, enable=False):
         ifr.ifr_flags &= ~IFF_PROMISC
     fcntl.ioctl(sock.fileno(), SIOCSIFFLAGS, ifr)
 
+
 def evaluate_linux(interface, max_capture_time):
     print "inside thread now"
     rawSocket = socket.socket(17, socket.SOCK_RAW, socket.htons(0x0003))
@@ -92,6 +94,8 @@ def evaluate_linux(interface, max_capture_time):
         VLAN_ID, Switch_Name, Port_Description, Ethernet_Port_Id = parse_lldp_packet_frames(lldpPayload)
         break
     return VLAN_ID, Switch_Name, Port_Description, Ethernet_Port_Id
+
+
 def parse_lldp_packet_frames(lldpPayload):
     Switch_Name = None
     VLAN_ID = None
@@ -120,7 +124,7 @@ def parse_lldp_packet_frames(lldpPayload):
         elif tlv_type == 0:
             print "TLV Type is ZERO, Breaking the while loop"
             break
-        else: 
+        else:
             # print tlv_type
             tlv_subtype = "" if tlv_type is 4 else struct.unpack("!B", lldpDU[0:1])
             startbyte = 0 if tlv_type is 4 else 1
@@ -181,8 +185,15 @@ def main():
 
     func = evaluate_Function[os_name]
     for interface in networkname_list:
-        # thread.start_new_thread(evaluate_Function[os_name], (interface, max_capture_time))
-        evaluate_linux(interface, max_capture_time)
+        t = Thread(target=evaluate_Function[os_name], args=(interface, max_capture_time))
+        t.start()
+
+        # try:
+            # thread.start_new_thread(evaluate_Function[os_name], (interface, max_capture_time))
+        # except:
+        #     print "Error, unable to start thread"
+
+        # evaluate_linux(interface, max_capture_time)
         # run_linux_socket(interface, max_capture_time)
 
 
