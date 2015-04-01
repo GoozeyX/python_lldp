@@ -1,4 +1,4 @@
-import os
+import os, sys
 import socket
 import struct
 import binascii
@@ -6,6 +6,7 @@ import subprocess
 import re
 import fcntl
 import ctypes
+import signal
 
 ETH_P_ALL = 0x0003
 IFF_PROMISC = 0x100
@@ -16,14 +17,24 @@ class ifreq(ctypes.Structure):
     _fields_ = [("ifr_ifrn", ctypes.c_char * 16),
                 ("ifr_flags", ctypes.c_short)]
 
+def exit_handler(signum, frame):
+    """ Exit signal handler """
+
+    capture_sock = frame.f_locals['capture_sock']
+    interface_name = frame.f_locals['interface_name']
+
+    promiscuous_mode(interface_name, capture_sock, False)
+    print("Abort, %s exit promiscuous mode." % interface_name)
+
+    sys.exit(1)
 
 # Enable promiscuous mode from http://stackoverflow.com/a/6072625
 def promiscuous_mode(interface, sock, enable=False):
     ifr = ifreq()
     ifr.ifr_ifrn = interface
-    fcntl.ioctl(rawSocket.fileno(), SIOCGIFFLAGS, ifr)
+    fcntl.ioctl(sock.fileno(), SIOCGIFFLAGS, ifr)
     ifr.ifr_flags |= IFF_PROMISC
-    fcntl.ioctl(rawSocket.fileno(), SIOCSIFFLAGS, ifr)
+    fcntl.ioctl(sock.fileno(), SIOCSIFFLAGS, ifr)
 
 def run_linux_socket(interface):
     rawSocket = socket.socket(17, socket.SOCK_RAW, socket.htons(0x0003))
@@ -41,6 +52,7 @@ def run_linux_socket(interface):
 
         if ethernetHeaderProtocol != '\x88\xCC':
             continue
+        parse_lldp_packet_frames(lldpPayload)
 
 def parse_lldp_packet_frames(lldpPayload):
 
@@ -52,6 +64,7 @@ def parse_lldp_packet_frames(lldpPayload):
     #lldpDU is the 3rd-Nth byte of the TLV Frame
     #lldpDU: we need to add +2 bytes because the address space changes when we cut off the header ( see http://standards.ieee.org/getieee802/download/802.1AB-2009.pdf page 24)
     #if tlvtype is 4 then datafield must start at 0 because of the payload structure for Port Descriptions (see IEEE PDF)
+        tlv_vlan = None
         tlv_header = struct.unpack("!H", lldpPayload[:2])[0]
         tlv_type = tlv_header >> 9
         tlv_len = (tlv_header & 0x01ff)
@@ -73,31 +86,9 @@ def parse_lldp_packet_frames(lldpPayload):
             tlv_datafield = lldpDU[startbyte:tlv_len]
 
 
+
         lldpPayload = lldpPayload[2 + tlv_len:]
     break
-        #Data Gathering
-    
-        # print "Now printing TLV Type: ",
-        # print tlv_type
-        # print "Now Printing tlv len in bytes: \n",
-        # print tlv_len
-        # print "now printing tlv_subtype: \n"
-
-        # print "Now printing tlv_datafield: \n"
-
-        # print "Printing tlv_datafield with binascii:\n"
-        # print "Now printing TLV Type: ",
-        # print tlv_type
-        # print "Now Printing tlv len in bytes: \n",
-        # print tlv_len
-        # print "now printing tlv_subtype: \n"
-        # # print tlv_subtype[0] (commenting this out because type 4 isnt a tuple)
-        # print "Now printing tlv_datafield: \n"
-        # # print tlv_datafield #this is useless because its in binary.
-        # print "Printing tlv_datafield with binascii:\n"
-        # print binascii.hexlify(tlv_datafield)
-
-        # This moves on to the next TLV
 
 def get_linux_interfacenames():
     interface_list = os.listdir("/sys/class/net")
@@ -109,10 +100,10 @@ def get_aix_interfacenames():
     interface_list = re.findall(r"^(ent?\d*).*$", str(output), re.M)
     return interface_list
 
-def run_snoop(interface_list):
+def run_snoop(interface):
     pass
 
-def run_tcpdumpaix(interface_list):
+def run_tcpdumpaix(interface):
     pass
 
 def parse_snoopdump():
@@ -127,16 +118,6 @@ def parse_snoopdump():
         print type(data)
         print binascii.hexlify(data[0:14])
 
-# if subtype for tlvstuffz = '\x00\x80\xC2\x01' then the next two bytes will contain the VLAN ID which needs to be performed using an unpack with !H
-
-    # if tlv_type == 0x7f:
-    #     _tlv_oui = unpack("!BBB", lldpDU[:3])
-    #     tlv_subtype = unpack("!B", lldpDU[3:3 + 1])[0]
-    #     lldpDU = lldpDU[3 + 1:]
-    # print tlv_header
-    # print "****************_ETHERNET_FRAME_****************"
-    # print "Type:            ", binascii.hexlify(ethernetHeaderProtocol)
-    # print "************************************************"
 
 # import os
 # import sys
