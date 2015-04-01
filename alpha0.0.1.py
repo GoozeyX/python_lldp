@@ -14,10 +14,35 @@ IFF_PROMISC = 0x100
 SIOCGIFFLAGS = 0x8913
 SIOCSIFFLAGS = 0x8914
 
-def get_operatingsystem_type():
+def get_networklist(osnameonly=None):
+    """Get Operating system type so that we can choose which method to use to get the LLDP data"""
+    osname = subprocess.Popen("uname -s", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0].strip()
+
+    def get_linux_interfacenames():
+        interface_list = os.listdir("/sys/class/net")
+        return interface_list
+
+    def get_aix_interfacenames():
+        output = subprocess.Popen("lsdev -l en\*", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0]
+        interface_list = re.findall(r"^(ent?\d*).*$", str(output), re.M)
+        return interface_list
+
+    if osnameonly is None:
+        return {
+            'Linux': get_linux_interfacenames(),
+            'AIX': get_aix_interfacenames(),
+        }[osname]
+    else:
+        return osname
+
+
+def get_operatingsystem_type_and_method():
     """Get Operating system type so that we can choose which method to use to get the LLDP data"""
     osname = subprocess.Popen("uname", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0].strip()
     return osname
+
+    # pytho ncase switch http://stackoverflow.com/questions/60208/replacements-for-switch-statement-in-python
+
 class ifreq(ctypes.Structure):
     _fields_ = [("ifr_ifrn", ctypes.c_char * 16),
                 ("ifr_flags", ctypes.c_short)]
@@ -44,7 +69,7 @@ def promiscuous_mode(interface, sock, enable=False):
         ifr.ifr_flags &= ~IFF_PROMISC
     fcntl.ioctl(sock.fileno(), SIOCSIFFLAGS, ifr)
 
-def run_linux_socket(interface, max_capture_time):
+def evaluate_linux(interface, max_capture_time):
     
     rawSocket = socket.socket(17, socket.SOCK_RAW, socket.htons(0x0003))
     rawSocket.bind((interface, ETH_P_ALL))
@@ -116,22 +141,21 @@ def parse_lldp_packet_frames(lldpPayload):
     return VLAN_ID, Switch_Name, Port_Description, Ethernet_Port_Id
 
 def get_linux_interfacenames():
-    # commenting this out for demo tests
-    # interface_list = os.listdir("/sys/class/net")
-    # return interface_list
-    return ["eth0"]
-
+    interface_list = os.listdir("/sys/class/net")
+    return interface_list
 
 def get_aix_interfacenames():
     output = subprocess.Popen("lsdev -l en\*", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0]
     interface_list = re.findall(r"^(ent?\d*).*$", str(output), re.M)
     return interface_list
 
+
 def run_snoop(interface):
     pass
 
-def run_tcpdumpaix(interface):
-    pass
+def evaluate_aix(interface):
+    subprocess.call(["tcpdump", "-i,", "xxxxx",])
+
 
 def parse_snoopdump():
     import thread
@@ -147,15 +171,20 @@ def parse_snoopdump():
 
 def main():
     max_capture_time = 90
-    networkname_list = get_linux_interfacenames()
+    networkname_list = get_networklist()
+    os_name = get_networklist(osnameonly=True)
 
     for interface in networkname_list:
+        thread.start_new_thread(evaluate_linux, (interface, max_capture_time))
         run_linux_socket(interface, max_capture_time)
 
 
 
 if __name__ == '__main__':
     main()
+
+
+
 # import os
 # import sys
 # import binascii
