@@ -7,16 +7,16 @@ import re
 import fcntl
 import ctypes
 
-class ifreq(ctypes.Structure):
-    _fields_ = [("ifr_ifrn", ctypes.c_char * 16),
-                ("ifr_flags", ctypes.c_short)]
 ETH_P_ALL = 0x0003
 IFF_PROMISC = 0x100
 SIOCGIFFLAGS = 0x8913
 SIOCSIFFLAGS = 0x8914
 
-rawSocket = socket.socket(17, socket.SOCK_RAW, socket.htons(0x0003))
-rawSocket.bind(("eth0", ETH_P_ALL))
+class ifreq(ctypes.Structure):
+    _fields_ = [("ifr_ifrn", ctypes.c_char * 16),
+                ("ifr_flags", ctypes.c_short)]
+
+
 # Enable promiscuous mode from http://stackoverflow.com/a/6072625
 def promiscuous_mode(interface, sock, enable=False):
     ifr = ifreq()
@@ -25,18 +25,24 @@ def promiscuous_mode(interface, sock, enable=False):
     ifr.ifr_flags |= IFF_PROMISC
     fcntl.ioctl(rawSocket.fileno(), SIOCSIFFLAGS, ifr)
 
+def run_linux_socket(interface):
+    rawSocket = socket.socket(17, socket.SOCK_RAW, socket.htons(0x0003))
+    rawSocket.bind((interface, ETH_P_ALL))
 
-while True:
-    packet = rawSocket.recvfrom(65565)
-    packet = packet[0]
-    lldpPayload = packet[14:]
-    ethernetHeaderTotal = packet[0:14]
+    promiscuous_mode(interface, rawSocket, True)
+    while True:
+        packet = rawSocket.recvfrom(65565)
+        packet = packet[0]
+        lldpPayload = packet[14:]
+        ethernetHeaderTotal = packet[0:14]
 
-    ethernetHeaderUnpacked = struct.unpack("!6s6s2s", ethernetHeaderTotal)
-    ethernetHeaderProtocol = ethernetHeaderUnpacked[2]
+        ethernetHeaderUnpacked = struct.unpack("!6s6s2s", ethernetHeaderTotal)
+        ethernetHeaderProtocol = ethernetHeaderUnpacked[2]
 
-    if ethernetHeaderProtocol != '\x88\xCC':
-        continue
+        if ethernetHeaderProtocol != '\x88\xCC':
+            continue
+
+def parse_lldp_packet_frames(lldpPayload):
 
     while lldpPayload:
     #[0] at the end of the unpack is because of the tuple returnvalue
