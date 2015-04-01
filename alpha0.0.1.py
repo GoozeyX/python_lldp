@@ -4,10 +4,27 @@ import struct
 import binascii
 import subprocess
 import re
+import fcntl
+import ctypes
 
+class ifreq(ctypes.Structure):
+    _fields_ = [("ifr_ifrn", ctypes.c_char * 16),
+                ("ifr_flags", ctypes.c_short)]
 ETH_P_ALL = 0x0003
+IFF_PROMISC = 0x100
+SIOCGIFFLAGS = 0x8913
+SIOCSIFFLAGS = 0x8914
+
 rawSocket = socket.socket(17, socket.SOCK_RAW, socket.htons(0x0003))
 rawSocket.bind(("eth0", ETH_P_ALL))
+# Enable promiscuous mode from http://stackoverflow.com/a/6072625
+def promiscuous_mode(interface, sock, enable=False):
+    ifr = ifreq()
+    ifr.ifr_ifrn = interface
+    fcntl.ioctl(rawSocket.fileno(), SIOCGIFFLAGS, ifr)
+    ifr.ifr_flags |= IFF_PROMISC
+    fcntl.ioctl(rawSocket.fileno(), SIOCSIFFLAGS, ifr)
+
 
 while True:
     packet = rawSocket.recvfrom(65565)
@@ -20,6 +37,7 @@ while True:
 
     if ethernetHeaderProtocol != '\x88\xCC':
         continue
+
     while lldpPayload:
     #[0] at the end of the unpack is because of the tuple returnvalue
     #!H unpacks as an unsigned short, which has a size of two bytes, which is what we need because the TLV "header" is 9 and 7 bits long (2bytes)
@@ -32,33 +50,48 @@ while True:
         tlv_type = tlv_header >> 9
         tlv_len = (tlv_header & 0x01ff)
         lldpDU = lldpPayload[2:tlv_len + 2]
-
         if tlv_type == 127:
-            tlv_oui = struct.unpack("!BBB", lldpDU[:3])
-            tlv_subtype = struct.unpack("!B", lldpDU[3:4])
+            tlv_oui = lldpDU[:3]
+            tlv_subtype = lldpDU[3:4]
             tlv_datafield = lldpDU[4:tlv_len]
-        #for regular tlv types 1-126
-        else:
+            if tlv_oui == "\x00\x80\xC2" and tlv_subtype == "\x01":
+                tlv_vlan = struct.unpack("!H", tlv_datafield)
+
+        elif tlv_type == 0:
+            print "TLV Type is ZERO, Breaking the while loop"
+            break
+        else: 
+            print tlv_type
             tlv_subtype = "" if tlv_type is 4 else struct.unpack("!B", lldpDU[0:1])
             startbyte = 0 if tlv_type is 4 else 1
             tlv_datafield = lldpDU[startbyte:tlv_len]
 
-        #Data Gathering
 
-        print "Now printing TLV Type: ",
-        print tlv_type
-        print "Now Printing tlv len in bytes: \n",
-        print tlv_len
-        print "now printing tlv_subtype: \n"
-        # print tlv_subtype[0] (commenting this out because type 4 isnt a tuple)
-        print "Now printing tlv_datafield: \n"
-        # print tlv_datafield #this is useless because its in binary.
-        print "Printing tlv_datafield with binascii:\n"
-        print binascii.hexlify(tlv_datafield)
+        lldpPayload = lldpPayload[2 + tlv_len:]
+    break
+        #Data Gathering
+    
+        # print "Now printing TLV Type: ",
+        # print tlv_type
+        # print "Now Printing tlv len in bytes: \n",
+        # print tlv_len
+        # print "now printing tlv_subtype: \n"
+
+        # print "Now printing tlv_datafield: \n"
+
+        # print "Printing tlv_datafield with binascii:\n"
+        # print "Now printing TLV Type: ",
+        # print tlv_type
+        # print "Now Printing tlv len in bytes: \n",
+        # print tlv_len
+        # print "now printing tlv_subtype: \n"
+        # # print tlv_subtype[0] (commenting this out because type 4 isnt a tuple)
+        # print "Now printing tlv_datafield: \n"
+        # # print tlv_datafield #this is useless because its in binary.
+        # print "Printing tlv_datafield with binascii:\n"
+        # print binascii.hexlify(tlv_datafield)
 
         # This moves on to the next TLV
-        lldpPayload = lldpPayload[2 + tlv_len:]
-
 
 def get_linux_interfacenames():
     interface_list = os.listdir("/sys/class/net")
