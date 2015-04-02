@@ -54,6 +54,30 @@ def promiscuous_mode(interface, sock, enable=False):
         ifr.ifr_flags &= ~IFF_PROMISC
     fcntl.ioctl(sock.fileno(), SIOCSIFFLAGS, ifr)
 
+def evaluate_aix(interface):
+    subprocess.call(['tcpdump', '-i', interface, '-s', '1500', '-c1', '-w', '/tmp/'+interface+'outfile', 'ether', 'proto', '0x88cc'])
+    # tcpdump -i en8 -s 1500 -c1 -w output_tcpdump.alex ether proto 0x88cc <--- CALL THIS SHIT yo lol!
+    with open("/tmp/"+interface+"outfile") as f:
+        f.seek(40)
+        data = f.read()
+        data = data[14:]
+        VLAN_ID, Switch_Name, Port_Description, Ethernet_Port_Id = parse_lldp_packet_frames(data)
+
+    path = "/opt/sysdoc/lldp_data/"
+    if not os.path.exists("/opt/sysdoc/lldp_data"):
+        os.makedirs(path, mode=0755)
+        
+    with open(path+interface, mode=None, buffering=None):
+
+        interface = "eth1"
+        text = "lol win"
+        with open(path+interface, "w") as f:
+            f.write("%s" % text)        
+
+        # print binascii.hexlify(data)
+        # print type(data)
+        # print data[0:14]
+
 
 def evaluate_linux(interface, max_capture_time):
     print "inside thread now"
@@ -93,6 +117,12 @@ def evaluate_linux(interface, max_capture_time):
         text = "lol win"
         with open(path+interface, "w") as f:
             f.write("%s" % text)
+
+    context = {
+    "a": VLAN_ID
+    "b": Ethernet_Port_Id
+    }
+    write(template.format(**context))
 def parse_lldp_packet_frames(lldpPayload):
     Switch_Name = None
     VLAN_ID = None
@@ -146,16 +176,6 @@ def parse_lldp_packet_frames(lldpPayload):
 def run_snoop(interface):
     pass
 
-def evaluate_aix(interface):
-    subprocess.call(['tcpdump', '-i', interface, '-s', '1500', '-c1', '-w', '/tmp/'+interface+'outfile', 'ether', 'proto', '0x88cc'])
-    # tcpdump -i en8 -s 1500 -c1 -w output_tcpdump.alex ether proto 0x88cc <--- CALL THIS SHIT yo lol!
-    with open("/tmp/"+interface+"outfile") as f:
-        f.seek(40)
-        data = f.read()
-
-        print binascii.hexlify(data)
-        print type(data)
-        print data[0:14]
 
 
 
