@@ -6,7 +6,7 @@ import subprocess
 import re
 import fcntl
 import ctypes
-import signal
+# import signal
 # import threading
 from threading import Thread
 
@@ -14,6 +14,7 @@ ETH_P_ALL = 0x0003
 IFF_PROMISC = 0x100
 SIOCGIFFLAGS = 0x8913
 SIOCSIFFLAGS = 0x8914
+
 
 def get_networklist(osnameonly=None):
     """Get Operating system type so that we can choose which method to use to get the LLDP data"""
@@ -24,8 +25,8 @@ def get_networklist(osnameonly=None):
         return interface_list
 
     def get_aix_interfacenames():
-        output = subprocess.Popen("lsdev -l en\*", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0]
-        interface_list = re.findall(r"^(ent?\d*).*$", str(output), re.M)
+        output = subprocess.call("lsdev -l en\*", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0]
+        interface_list = re.findall(r"^(en\d*)\s+Available.*$", str(output), re.M)
         return interface_list
 
     if osnameonly is None:
@@ -35,29 +36,12 @@ def get_networklist(osnameonly=None):
         }[osname]
     else:
         return osname
-
-
-def get_operatingsystem_type_and_method():
-    """Get Operating system type so that we can choose which method to use to get the LLDP data"""
-    osname = subprocess.Popen("uname", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0].strip()
-    return osname
-
     # pytho ncase switch http://stackoverflow.com/questions/60208/replacements-for-switch-statement-in-python
+
 
 class ifreq(ctypes.Structure):
     _fields_ = [("ifr_ifrn", ctypes.c_char * 16),
                 ("ifr_flags", ctypes.c_short)]
-
-def exit_handler(signum, frame):
-    """ Exit signal handler """
-
-    rawSocket = frame.f_locals['rawSocket']
-    interface = frame.f_locals['interface']
-
-    promiscuous_mode(interface, rawSocket, False)
-    print("Abort, %s exit promiscuous mode." % interface)
-
-    sys.exit(1)
 
 # Enable promiscuous mode from http://stackoverflow.com/a/6072625
 def promiscuous_mode(interface, sock, enable=False):
@@ -94,6 +78,8 @@ def evaluate_linux(interface, max_capture_time):
         VLAN_ID, Switch_Name, Port_Description, Ethernet_Port_Id = parse_lldp_packet_frames(lldpPayload)
 
         break
+    promiscuous_mode(interface, rawSocket, False)
+
     return VLAN_ID, Switch_Name, Port_Description, Ethernet_Port_Id
 
 
@@ -145,14 +131,6 @@ def parse_lldp_packet_frames(lldpPayload):
 
     return VLAN_ID, Switch_Name, Port_Description, Ethernet_Port_Id
 
-def get_linux_interfacenames():
-    interface_list = os.listdir("/sys/class/net")
-    return interface_list
-
-def get_aix_interfacenames():
-    output = subprocess.call("lsdev -l en\*", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0]
-    interface_list = re.findall(r"^(en\d*)\s+Available.*$", str(output), re.M)
-    return interface_list
 
 
 def run_snoop(interface):
@@ -205,6 +183,20 @@ def main():
     sys.exit(0)
     
 
+
+
+
+
+# def exit_handler(signum, frame):
+#     """ Exit signal handler """
+
+#     rawSocket = frame.f_locals['rawSocket']
+#     interface = frame.f_locals['interface']
+
+#     promiscuous_mode(interface, rawSocket, False)
+#     print("Abort, %s exit promiscuous mode." % interface)
+
+#     sys.exit(1)
 
         # t.join(timeout=10)
         # print "timeout ended"
