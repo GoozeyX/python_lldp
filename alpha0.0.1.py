@@ -7,7 +7,7 @@ import re
 import fcntl
 import ctypes
 import signal
-import threading
+# import threading
 from threading import Thread
 
 ETH_P_ALL = 0x0003
@@ -77,9 +77,9 @@ def evaluate_linux(interface, max_capture_time):
     rawSocket.bind((interface, ETH_P_ALL))
 
     promiscuous_mode(interface, rawSocket, True)
-    signal.signal(signal.SIGINT, exit_handler)
-    signal.signal(signal.SIGALRM, exit_handler)
-    signal.alarm(max_capture_time)
+    # signal.signal(signal.SIGINT, exit_handler)
+    # signal.signal(signal.SIGALRM, exit_handler)
+    # signal.alarm(max_capture_time)
     while True:
         packet = rawSocket.recvfrom(65565)
         packet = packet[0]
@@ -173,6 +173,11 @@ def parse_snoopdump():
         print type(data)
         print binascii.hexlify(data[0:14])
 
+def killtimer():
+    import time
+    time.sleep(10)
+
+
 def main():
     max_capture_time = 90
     networkname_list = get_networklist()
@@ -186,7 +191,17 @@ def main():
     func = evaluate_Function[os_name]
     for interface in networkname_list:
         t = Thread(target=evaluate_Function[os_name], args=(interface, max_capture_time))
+        t.setDaemon(True)
         t.start()
+    print "starting killtimer"
+    killtimer()
+    sys.exit(0)
+    
+
+
+        # t.join(timeout=10)
+        # print "timeout ended"
+        # sys.exit(0)
 
         # try:
             # thread.start_new_thread(evaluate_Function[os_name], (interface, max_capture_time))
