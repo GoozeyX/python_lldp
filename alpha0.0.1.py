@@ -85,13 +85,14 @@ def evaluate_linux(interface, max_capture_time):
         packet = packet[0]
         lldpPayload = packet[14:]
         ethernetHeaderTotal = packet[0:14]
-
         ethernetHeaderUnpacked = struct.unpack("!6s6s2s", ethernetHeaderTotal)
         ethernetHeaderProtocol = ethernetHeaderUnpacked[2]
 
         if ethernetHeaderProtocol != '\x88\xCC':
             continue
+
         VLAN_ID, Switch_Name, Port_Description, Ethernet_Port_Id = parse_lldp_packet_frames(lldpPayload)
+
         break
     return VLAN_ID, Switch_Name, Port_Description, Ethernet_Port_Id
 
@@ -149,8 +150,8 @@ def get_linux_interfacenames():
     return interface_list
 
 def get_aix_interfacenames():
-    output = subprocess.Popen("lsdev -l en\*", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0]
-    interface_list = re.findall(r"^(ent?\d*).*$", str(output), re.M)
+    output = subprocess.call("lsdev -l en\*", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0]
+    interface_list = re.findall(r"^(en\d*)\s+Available.*$", str(output), re.M)
     return interface_list
 
 
@@ -158,24 +159,30 @@ def run_snoop(interface):
     pass
 
 def evaluate_aix(interface):
-    subprocess.call(["tcpdump", "-i,", "xxxxx",])
+    subprocess.call(['tcpdump', '-i', interface, '-s', '1500', '-c1', '-w', '/tmp/'+interface+'outfile', 'ether', 'proto', '0x88cc'])
+    # tcpdump -i en8 -s 1500 -c1 -w output_tcpdump.alex ether proto 0x88cc <--- CALL THIS SHIT yo lol!
+    with open("/tmp/"+interface+"outfile") as f:
+        f.seek(40)
+        data = f.read()
+
+        print binascii.hexlify(data)
+        print type(data)
+        print data[0:14]
+
 
 
 def parse_snoopdump():
-    import thread
+
 
     with open("output_tcpdump.alex") as f:
         f.seek(40)
         data = f.read()
+        data = data[0:14]
 
-        #print data
-        print binascii.hexlify(data)
-        print type(data)
-        print binascii.hexlify(data[0:14])
 
 def killtimer():
     import time
-    time.sleep(10)
+    time.sleep(3)
 
 
 def main():
@@ -188,12 +195,12 @@ def main():
         'AIX': evaluate_aix,
     }
 
-    func = evaluate_Function[os_name]
+    # func = evaluate_Function[os_name]
     for interface in networkname_list:
         t = Thread(target=evaluate_Function[os_name], args=(interface, max_capture_time))
         t.setDaemon(True)
         t.start()
-    print "starting killtimer"
+    print "starting killtimer" #Debug
     killtimer()
     sys.exit(0)
     
