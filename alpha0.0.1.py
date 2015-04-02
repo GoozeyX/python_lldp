@@ -81,8 +81,18 @@ def evaluate_linux(interface, max_capture_time):
     promiscuous_mode(interface, rawSocket, False)
 
     return VLAN_ID, Switch_Name, Port_Description, Ethernet_Port_Id
+    # call process function here or process here directly
+    path = "/opt/sysdoc/lldp_data/"
+    
+    if not os.path.exists("/opt/sysdoc/lldp_data"):
+        os.makedirs(path, mode=0755)
 
+    with open(path+interface, mode=None, buffering=None):
 
+        interface = "eth1"
+        text = "lol win"
+        with open(path+interface, "w") as f:
+            f.write("%s" % text)
 def parse_lldp_packet_frames(lldpPayload):
     Switch_Name = None
     VLAN_ID = None
