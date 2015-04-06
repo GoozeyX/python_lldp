@@ -19,13 +19,13 @@ SIOCSIFFLAGS = 0x8914
 def get_networklist(osnameonly=None):
     """Get Operating system type so that we can choose which method to use to get the LLDP data"""
     osname = subprocess.Popen("uname -s", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0].strip()
-
+    print osname
     def get_linux_interfacenames():
         interface_list = os.listdir("/sys/class/net")
         return interface_list
 
     def get_aix_interfacenames():
-        output = subprocess.call("lsdev -l en\*", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0]
+        output = subprocess.Popen("lsdev -l en\*", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0]
         interface_list = re.findall(r"^(en\d*)\s+Available.*$", str(output), re.M)
         return interface_list
 
@@ -106,18 +106,17 @@ def evaluate_linux(interface, max_capture_time):
 
     # return VLAN_ID, Switch_Name, Port_Description, Ethernet_Port_Id
     path = "/opt/sysdoc/lldp_data/"
-        
+
     if not os.path.exists("/opt/sysdoc/lldp_data"):
         os.makedirs(path, mode=0755)
 
     with open(path+interface, mode=None, buffering=None): #TODO write mode 
-            context = {
-                "vlanid": VLAN_ID,
-                "ethernetportid": Ethernet_Port_Id,
-                "portdescription": Port_Description,
-                "switchname": Switch_Name,
-                }
-
+        context = {
+            "vlanid": VLAN_ID,
+            "ethernetportid": Ethernet_Port_Id,
+            "portdescription": Port_Description,
+            "switchname": Switch_Name,
+            }
         template = """VLANID={vlanid}
         ETHERNETPORTID={ethernetportid}
         PORTDESCRIPTION={portdescription}
@@ -201,12 +200,12 @@ def main():
     max_capture_time = 90
     networkname_list = get_networklist()
     os_name = get_networklist(osnameonly=True)
-
+    print os_name
     evaluate_Function = {
         'Linux': evaluate_linux,
         'AIX': evaluate_aix,
     }
-
+    # Nevermind 
     # func = evaluate_Function[os_name]
     for interface in networkname_list:
         t = Thread(target=evaluate_Function[os_name], args=(interface, max_capture_time))
