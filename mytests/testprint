@@ -1,0 +1,28 @@
+import os
+
+# template = """VLANID={0}
+# ETHERNETPORTID={1}
+# PORTDESCRIPTION={2}
+# SWITCHNAME={3}
+# """
+
+# var = template.format("a", "b", "c", "d")
+
+# for i in var.strip().split('\n'):
+#     print i
+
+VLAN_ID = "rofl"
+Ethernet_Port_Id = "lol"
+Port_Description = "lmao"
+Switch_Name = "noes"
+context = {
+    "VLAN_ID": VLAN_ID,
+    "Ethernet_Port_Id": Ethernet_Port_Id,
+    "portdescription": Port_Description,
+    "switchname": Switch_Name,
+    }
+template = """VLANID={0}
+ETHERNETPORTID={1}
+PORTDESCRIPTION={2}
+SWITCHNAME={3}"""
+print template.format(**context)
