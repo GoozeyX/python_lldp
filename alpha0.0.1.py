@@ -176,19 +176,19 @@ def parse_lldp_packet_frames(lldpPayload):
 
 
 
-def run_snoop(interface):
-    pass
+# def run_snoop(interface):
+#     pass
 
 
 
 
-def parse_snoopdump():
+# def parse_snoopdump():
 
 
-    with open("output_tcpdump.alex") as f:
-        f.seek(40)
-        data = f.read()
-        data = data[0:14]
+#     with open("output_tcpdump.alex") as f:
+#         f.seek(40)
+#         data = f.read()
+#         data = data[0:14]
 
 
 def killtimer():
