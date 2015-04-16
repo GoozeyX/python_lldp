@@ -8,8 +8,8 @@ import fcntl
 import ctypes
 # import signal
 # import threading
-from threading import Thread
-
+# from threading import Thread
+from multiprocessing import Process, Queue
 ETH_P_ALL = 0x0003
 IFF_PROMISC = 0x100
 SIOCGIFFLAGS = 0x8913
@@ -125,7 +125,7 @@ def evaluate_linux(interface, max_capture_time):
             f.write(template.format(**context))
 
 
-    write(template.format(**context))
+        # write(template.format(**context))
 def parse_lldp_packet_frames(lldpPayload):
     Switch_Name = None
     VLAN_ID = None
@@ -175,20 +175,16 @@ def parse_lldp_packet_frames(lldpPayload):
     return VLAN_ID, Switch_Name, Port_Description, Ethernet_Port_Id
 
 
+def exit_handler(signum, frame):
+    """ Exit signal handler """
 
-# def run_snoop(interface):
-#     pass
+    rawSocket = frame.f_locals['rawSocket']
+    interface = frame.f_locals['interface']
 
+    promiscuous_mode(interface, rawSocket, False)
+    print("Abort, %s exit promiscuous mode." % interface)
 
-
-
-# def parse_snoopdump():
-
-
-#     with open("output_tcpdump.alex") as f:
-#         f.seek(40)
-#         data = f.read()
-#         data = data[0:14]
+    sys.exit(1)
 
 
 def killtimer():
@@ -205,31 +201,47 @@ def main():
         'Linux': evaluate_linux,
         'AIX': evaluate_aix,
     }
+
+    for interface in networkname_list:
+        func = evaluate_Function[os_name]
+        func(interface, max_capture_time)
+
+
+
+    # taskList = [evaluate_Function[os_name]]
+
+    # count = multiprocessing.cpu_count()
+    # pools = multiprocessing.Pool(processes=count)
+
+    # processes = [multiprocessing.Process(target=evaluate_Function[os_name], args=(interface, max_capture_time)) for interface in networkname_list] 
+
+    # starting_var = pools.map(evaluate_Function[os], iterable, chunksize=None)
     # Nevermind 
     # func = evaluate_Function[os_name]
-    for interface in networkname_list:
-        t = Thread(target=evaluate_Function[os_name], args=(interface, max_capture_time))
-        t.setDaemon(True)
-        t.start()
-    print "starting killtimer" #Debug
-    killtimer()
-    sys.exit(0)
-    
+    # for interface in networkname_list:
+    #     t = Thread(target=evaluate_Function[os_name], args=(interface, max_capture_time))
+    #     t.setDaemon(True)
+    #     t.start()
+    # print "starting killtimer" #Debug
+    # killtimer()
+    # sys.exit(0)
+
+# Read this for multiprocessing:
+# http://stackoverflow.com/questions/10797998/is-it-possible-to-multiprocess-a-function-that-returns-something-in-python
 
 
 
 
+def exit_handler(signum, frame):
+    """ Exit signal handler """
 
-# def exit_handler(signum, frame):
-#     """ Exit signal handler """
+    rawSocket = frame.f_locals['rawSocket']
+    interface = frame.f_locals['interface']
 
-#     rawSocket = frame.f_locals['rawSocket']
-#     interface = frame.f_locals['interface']
+    promiscuous_mode(interface, rawSocket, False)
+    print("Abort, %s exit promiscuous mode." % interface)
 
-#     promiscuous_mode(interface, rawSocket, False)
-#     print("Abort, %s exit promiscuous mode." % interface)
-
-#     sys.exit(1)
+    sys.exit(1)
 
         # t.join(timeout=10)
         # print "timeout ended"
@@ -248,6 +260,24 @@ def main():
 if __name__ == '__main__':
     main()
 
+
+
+
+
+
+# def run_snoop(interface):
+#     pass
+
+
+
+
+# def parse_snoopdump():
+
+
+#     with open("output_tcpdump.alex") as f:
+#         f.seek(40)
+#         data = f.read()
+#         data = data[0:14]
 
 
 # import os
