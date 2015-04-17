@@ -5,11 +5,20 @@ import binascii
 import subprocess
 import re
 import fcntl
-import ctypes
+
 import signal
 from threading import Thread
 import threading
 from multiprocessing import Process, Queue
+
+try:
+    import ctypes
+    class ifreq(ctypes.Structure):
+        _fields_ = [("ifr_ifrn", ctypes.c_char * 16),
+                    ("ifr_flags", ctypes.c_short)]
+except (ImportError, NameError) as e:
+    print "Meh"
+
 ETH_P_ALL = 0x0003
 IFF_PROMISC = 0x100
 SIOCGIFFLAGS = 0x8913
@@ -31,17 +40,12 @@ def get_networklist(osnameonly=None):
 
     if osnameonly is None:
         return {
-            'Linux': get_linux_interfacenames(),
-            'AIX': get_aix_interfacenames(),
-        }[osname]
+            'Linux': get_linux_interfacenames,
+            'AIX': get_aix_interfacenames,
+        }[osname]()
     else:
         return osname
     # pytho ncase switch http://stackoverflow.com/questions/60208/replacements-for-switch-statement-in-python
-
-
-class ifreq(ctypes.Structure):
-    _fields_ = [("ifr_ifrn", ctypes.c_char * 16),
-                ("ifr_flags", ctypes.c_short)]
 
 # Enable promiscuous mode from http://stackoverflow.com/a/6072625
 def promiscuous_mode(interface, sock, enable=False):
@@ -175,7 +179,7 @@ def main():
     max_capture_time = 70
     networkname_list = get_networklist()
     os_name = get_networklist(osnameonly=True)
-    print os_name
+    # print os_name
     evaluate_Function = {
         'Linux': evaluate_linux,
         'AIX': evaluate_aix,
