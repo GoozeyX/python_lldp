@@ -7,8 +7,7 @@ import re
 import fcntl
 import ctypes
 # import signal
-# import threading
-# from threading import Thread
+from threading import Thread
 from multiprocessing import Process, Queue
 ETH_P_ALL = 0x0003
 IFF_PROMISC = 0x100
@@ -72,11 +71,7 @@ def evaluate_aix(interface):
         interface = "eth1"
         text = "lol win"
         with open(path+interface, "w") as f:
-            f.write("%s" % text)        
-
-        # print binascii.hexlify(data)
-        # print type(data)
-        # print data[0:14]
+            f.write("%s" % text)
 
 
 def evaluate_linux(interface, max_capture_time):
@@ -202,42 +197,14 @@ def main():
         'AIX': evaluate_aix,
     }
 
-    # for interface in networkname_list:
-    #     t = Thread(target=evaluate_Function[os_name], args=(interface, max_capture_time))
-    #     t.setDaemon(True)
-    #     t.start()
-    # print "starting killtimer" #Debug
-    # killtimer()
-    # sys.exit(0)
+    for interface in networkname_list:
+        t = Thread(target=evaluate_Function[os_name], args=(interface, max_capture_time))
+        t.setDaemon(True)
+        t.start()
+    print "starting killtimer" #Debug
+    killtimer()
+    sys.exit(0)
 
-
-
-
-
-    # for interface in networkname_list:
-    #     func = evaluate_Function[os_name]
-    #     func(interface, max_capture_time)
-
-
-
-    # taskList = [evaluate_Function[os_name]]
-
-    # count = multiprocessing.cpu_count()
-    # pools = multiprocessing.Pool(processes=count)
-
-    # processes = [multiprocessing.Process(target=evaluate_Function[os_name], args=(interface, max_capture_time)) for interface in networkname_list] 
-
-    # starting_var = pools.map(evaluate_Function[os], iterable, chunksize=None)
-    # Nevermind 
-    # func = evaluate_Function[os_name]
-
-
-# Read this for multiprocessing:
-# http://stackoverflow.com/questions/10797998/is-it-possible-to-multiprocess-a-function-that-returns-something-in-python
-# http://pymotw.com/2/multiprocessing/basics.html#importable-target-functions
-# http://stackoverflow.com/questions/10797998/is-it-possible-to-multiprocess-a-function-that-returns-something-in-python
-# https://gist.github.com/ourway/8196934
-# http://pymotw.com/2/multiprocessing/communication.html
 def exit_handler(signum, frame):
     """ Exit signal handler """
 
@@ -249,86 +216,8 @@ def exit_handler(signum, frame):
 
     sys.exit(1)
 
-        # t.join(timeout=10)
-        # print "timeout ended"
-        # sys.exit(0)
-
-        # try:
-            # thread.start_new_thread(evaluate_Function[os_name], (interface, max_capture_time))
-        # except:
-        #     print "Error, unable to start thread"
-
-        # evaluate_linux(interface, max_capture_time)
-        # run_linux_socket(interface, max_capture_time)
-
 
 
 if __name__ == '__main__':
     main()
 
-
-
-
-
-
-# def run_snoop(interface):
-#     pass
-
-
-
-
-# def parse_snoopdump():
-
-
-#     with open("output_tcpdump.alex") as f:
-#         f.seek(40)
-#         data = f.read()
-#         data = data[0:14]
-
-
-# import os
-# import sys
-# import binascii
-# with open("output_tcpdump.alex") as f:
-#     f.seek(40)
-#     data = f.read()
-
-#     #print data
-#     print binascii.hexlify(data)
-#     print type(data)
-#     print data[0:14]
-
-# import os
-# import sys
-# import binascii
-# with open("output_tcpdump.alex") as f:
-#     f.seek(40)
-#     data = f.read()
-
-#     #print data
-#     print binascii.hexlify(data)
-#     print type(data)
-#     print binascii.hexlify(data[0:14])
-
-
-
-#Ethernet Frame
-# +----------+------------+-----------+-----------+-----+
-# | DEST MAC | SOURCE MAC | ETHERTYPE | User Data | FCS |
-# +----------+------------+-----------+-----------+-----+
-# |        6 |          6 |         2 | 46-1500   |   4 |
-# +----------+------------+-----------+-----------+-----+
-
-#TLV Frame (from userdata from ethernet frame)
-# +----------+-----------------+------------+--------------+
-# | TLV Type | TLV information | ID/Subtype |   Payload    |
-# +----------+-----------------+------------+--------------+
-# | 7 bits   | 9 bits          | 1 byte     | 0-511 Octets |
-# +----------+-----------------+------------+--------------+
-
-# TLV Type 127 Frames
-# +----------+-----------------+---------+---------+--------------------+
-# | TLV Type | TLV information |   OUI   | subtype | Information string |
-# +----------+-----------------+---------+---------+--------------------+
-# | 7 bit    | 9 bit           | 3 bytes | 1 byte  | 0-507bytes         |
-# +----------+-----------------+---------+---------+--------------------+
