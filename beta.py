@@ -58,7 +58,11 @@ def promiscuous_mode(interface, sock, enable=False):
         ifr.ifr_flags &= ~IFF_PROMISC
     fcntl.ioctl(sock.fileno(), SIOCSIFFLAGS, ifr)
 
-def evaluate_aix(interface):
+def evaluate_aix(interface, max_capture_time):
+# figure out a way to track subprocess calls and their pid and kill them when exiting, also google "at exit" signals because alarm can work incorrectly when buffer overflow occur
+    signal.signal(signal.SIGINT, exit_handler_aix)
+    signal.signal(signal.SIGALRM, exit_handler_aix)
+    signal.alarm(max_capture_time)
     subprocess.call(['tcpdump', '-i', interface, '-s', '1500', '-c1', '-w', '/tmp/'+interface+'outfile', 'ether', 'proto', '0x88cc'])
     # tcpdump -i en8 -s 1500 -c1 -w output_tcpdump.alex ether proto 0x88cc <--- CALL THIS SHIT yo lol!
     with open("/tmp/"+interface+"outfile") as f:
@@ -71,12 +75,19 @@ def evaluate_aix(interface):
     if not os.path.exists("/opt/sysdoc/lldp_data"):
         os.makedirs(path, mode=0755)
         
-    with open(path+interface, mode=None, buffering=None):
-
-        interface = "eth1"
-        text = "lol win"
-        with open(path+interface, "w") as f:
-            f.write("%s" % text)
+    with open(path+interface, 'w') as f: #TODO write mode 
+        context = {
+            "vlanid": VLAN_ID,
+            "ethernetportid": Ethernet_Port_Id,
+            "portdescription": Port_Description,
+            "switchname": Switch_Name,
+            }
+        template = """VLANID={vlanid}
+ETHERNETPORTID={ethernetportid}
+PORTDESCRIPTION={portdescription}
+SWITCHNAME={switchname}"""
+        
+        f.write(template.format(**context))
 
 
 def evaluate_linux(interface, max_capture_time):
@@ -188,6 +199,7 @@ def main():
     processes = [Process(target=evaluate_Function[os_name], args=(interface, max_capture_time)) for interface in networkname_list] 
     print processes
     for x in processes:
+        # x.daemon = True Bad idea really... 
         x.start()
 
 
@@ -211,6 +223,10 @@ def exit_handler(signum, frame):
     promiscuous_mode(interface, rawSocket, False)
     print("Abort, %s exit promiscuous mode." % interface)
 
+    sys.exit(1)
+
+def exit_handler_aix(signum, frame):
+    print "Aborting AIX"
     sys.exit(1)
 
 def killtimer():
