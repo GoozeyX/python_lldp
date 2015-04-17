@@ -8,6 +8,7 @@ import fcntl
 import ctypes
 # import signal
 from threading import Thread
+import threading
 from multiprocessing import Process, Queue
 ETH_P_ALL = 0x0003
 IFF_PROMISC = 0x100
@@ -170,23 +171,6 @@ def parse_lldp_packet_frames(lldpPayload):
     return VLAN_ID, Switch_Name, Port_Description, Ethernet_Port_Id
 
 
-def exit_handler(signum, frame):
-    """ Exit signal handler """
-
-    rawSocket = frame.f_locals['rawSocket']
-    interface = frame.f_locals['interface']
-
-    promiscuous_mode(interface, rawSocket, False)
-    print("Abort, %s exit promiscuous mode." % interface)
-
-    sys.exit(1)
-
-
-def killtimer():
-    import time
-    time.sleep(3)
-
-
 def main():
     max_capture_time = 90
     networkname_list = get_networklist()
@@ -197,14 +181,23 @@ def main():
         'AIX': evaluate_aix,
     }
 
-    for interface in networkname_list:
-        t = Thread(target=evaluate_Function[os_name], args=(interface, max_capture_time))
-        t.setDaemon(True)
-        t.start()
-    print "starting killtimer" #Debug
-    killtimer()
-    sys.exit(0)
+    processes = [Process(target=evaluate_Function[os_name], args=(interface, max_capture_time)) for interface in networkname_list] 
+    print processes
+    for x in processes:
+        x.start()
 
+
+######## Threading template pasta #############
+    # for interface in networkname_list:
+    #     t = Thread(target=evaluate_Function[os_name], args=(interface, max_capture_time))
+    #     t.setDaemon(True)
+    #     t.start()
+
+    # print "starting join now"
+    # t.join(3)
+    # killtimer()
+    # sys.exit(0)
+######## END Threading template pasta #############
 def exit_handler(signum, frame):
     """ Exit signal handler """
 
@@ -216,8 +209,14 @@ def exit_handler(signum, frame):
 
     sys.exit(1)
 
+def killtimer():
+    import time
+    time.sleep(3)
 
 
 if __name__ == '__main__':
     main()
 
+# Notes:
+# Subprocess with timeout:
+# http://stackoverflow.com/questions/1191374/subprocess-with-timeout
