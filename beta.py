@@ -6,7 +6,7 @@ import subprocess
 import re
 import fcntl
 import ctypes
-# import signal
+import signal
 from threading import Thread
 import threading
 from multiprocessing import Process, Queue
@@ -81,9 +81,9 @@ def evaluate_linux(interface, max_capture_time):
     rawSocket.bind((interface, ETH_P_ALL))
 
     promiscuous_mode(interface, rawSocket, True)
-    # signal.signal(signal.SIGINT, exit_handler)
-    # signal.signal(signal.SIGALRM, exit_handler)
-    # signal.alarm(max_capture_time)
+    signal.signal(signal.SIGINT, exit_handler)
+    signal.signal(signal.SIGALRM, exit_handler)
+    signal.alarm(max_capture_time)
     while True:
         packet = rawSocket.recvfrom(65565)
         packet = packet[0]
@@ -106,7 +106,7 @@ def evaluate_linux(interface, max_capture_time):
     if not os.path.exists("/opt/sysdoc/lldp_data"):
         os.makedirs(path, mode=0755)
 
-    with open(path+interface, mode=None, buffering=None): #TODO write mode 
+    with open(path+interface, 'w') as f: #TODO write mode 
         context = {
             "vlanid": VLAN_ID,
             "ethernetportid": Ethernet_Port_Id,
@@ -117,8 +117,8 @@ def evaluate_linux(interface, max_capture_time):
         ETHERNETPORTID={ethernetportid}
         PORTDESCRIPTION={portdescription}
         SWITCHNAME={switchname}"""
-        with open(path+interface, "w") as f:
-            f.write(template.format(**context))
+        
+        f.write(template.format(**context))
 
 
         # write(template.format(**context))
@@ -172,7 +172,7 @@ def parse_lldp_packet_frames(lldpPayload):
 
 
 def main():
-    max_capture_time = 90
+    max_capture_time = 70
     networkname_list = get_networklist()
     os_name = get_networklist(osnameonly=True)
     print os_name
