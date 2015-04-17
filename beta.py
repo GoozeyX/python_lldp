@@ -114,9 +114,9 @@ def evaluate_linux(interface, max_capture_time):
             "switchname": Switch_Name,
             }
         template = """VLANID={vlanid}
-        ETHERNETPORTID={ethernetportid}
-        PORTDESCRIPTION={portdescription}
-        SWITCHNAME={switchname}"""
+ETHERNETPORTID={ethernetportid}
+PORTDESCRIPTION={portdescription}
+SWITCHNAME={switchname}"""
         
         f.write(template.format(**context))
 
