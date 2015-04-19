@@ -57,7 +57,7 @@ def promiscuous_mode(interface, sock, enable=False):
     else:
         ifr.ifr_flags &= ~IFF_PROMISC
     fcntl.ioctl(sock.fileno(), SIOCSIFFLAGS, ifr)
-
+dsad
 def evaluate_aix(interface, max_capture_time):
 # figure out a way to track subprocess calls and their pid and kill them when exiting, also google "at exit" signals because alarm can work incorrectly when buffer overflow occur
     signal.signal(signal.SIGINT, exit_handler_aix)
@@ -70,7 +70,6 @@ def evaluate_aix(interface, max_capture_time):
         data = f.read()
         data = data[14:]
         VLAN_ID, Switch_Name, Port_Description, Ethernet_Port_Id = parse_lldp_packet_frames(data)
-
     path = "/opt/sysdoc/lldp_data/"
     if not os.path.exists("/opt/sysdoc/lldp_data"):
         os.makedirs(path, mode=0755)
