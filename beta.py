@@ -5,7 +5,7 @@ import binascii
 import subprocess
 import re
 import fcntl
-
+import time
 import signal
 from threading import Thread
 import threading
@@ -57,14 +57,17 @@ def promiscuous_mode(interface, sock, enable=False):
     else:
         ifr.ifr_flags &= ~IFF_PROMISC
     fcntl.ioctl(sock.fileno(), SIOCSIFFLAGS, ifr)
-dsad
+
 def evaluate_aix(interface, max_capture_time):
 # figure out a way to track subprocess calls and their pid and kill them when exiting, also google "at exit" signals because alarm can work incorrectly when buffer overflow occur
     signal.signal(signal.SIGINT, exit_handler_aix)
     signal.signal(signal.SIGALRM, exit_handler_aix)
     signal.alarm(max_capture_time)
-    subprocess.call(['tcpdump', '-i', interface, '-s', '1500', '-c1', '-w', '/tmp/'+interface+'outfile', 'ether', 'proto', '0x88cc'])
+    # subprocess.call(['tcpdump', '-i', interface, '-s', '1500', '-c1', '-w', '/tmp/'+interface+'outfile', 'ether', 'proto', '0x88cc'])
     # tcpdump -i en8 -s 1500 -c1 -w output_tcpdump.alex ether proto 0x88cc <--- CALL THIS SHIT yo lol!
+    process = subprocess.Popen(['tcpdump', '-i', interface, '-s', '1500', '-c1', '-w', '/tmp/'+interface+'outfile', 'ether', 'proto', '0x88cc'])
+    time.sleep(62)
+    process.terminate()
     with open("/tmp/"+interface+"outfile") as f:
         f.seek(40)
         data = f.read()
@@ -226,11 +229,11 @@ def exit_handler(signum, frame):
 
 def exit_handler_aix(signum, frame):
     print "Aborting AIX"
-    sys.exit(1)
+    sys.exit(0)
 
-def killtimer():
-    import time
-    time.sleep(3)
+# def killtimer():
+#     import time
+#     time.sleep(3)
 
 
 if __name__ == '__main__':
