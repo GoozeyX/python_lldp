@@ -166,7 +166,7 @@ def parse_lldp_packet_frames(lldpPayload):
             tlv_subtype = lldpDU[3:4]
             tlv_datafield = lldpDU[4:tlv_len]
             if tlv_oui == "\x00\x80\xC2" and tlv_subtype == "\x01":
-                VLAN_ID = struct.unpack("!H", tlv_datafield)
+                VLAN_ID = struct.unpack("!H", tlv_datafield)[0]
 
         elif tlv_type == 0:
             print "TLV Type is ZERO, Breaking the while loop"
