@@ -63,11 +63,15 @@ def evaluate_aix(interface, max_capture_time):
     signal.signal(signal.SIGINT, exit_handler_aix)
     signal.signal(signal.SIGALRM, exit_handler_aix)
     signal.alarm(max_capture_time)
-    # subprocess.call(['tcpdump', '-i', interface, '-s', '1500', '-c1', '-w', '/tmp/'+interface+'outfile', 'ether', 'proto', '0x88cc'])
-    # tcpdump -i en8 -s 1500 -c1 -w output_tcpdump.alex ether proto 0x88cc <--- CALL THIS SHIT yo lol!
+    # tcpdump -i en8 -s 1500 -c1 -w output_tcpdump.alex ether proto 0x88cc
     process = subprocess.Popen(['tcpdump', '-i', interface, '-s', '1500', '-c1', '-w', '/tmp/'+interface+'outfile', 'ether', 'proto', '0x88cc'])
     time.sleep(62)
-    process.terminate()
+    if process.poll() is None:
+        process.terminate()
+    time.sleep(3)
+    if process.poll() is None:
+        process.kill()
+        
     with open("/tmp/"+interface+"outfile") as f:
         f.seek(40)
         data = f.read()
