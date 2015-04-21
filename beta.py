@@ -111,12 +111,8 @@ SWITCHNAME={switchname}"""
         f.write(template.format(**context))
 
 def evaluate_solaris(interface, max_capture_time):
-# figure out a way to track subprocess calls and
-    # signal.signal(signal.SIGINT, exit_handler_aix)
-    # signal.signal(signal.SIGALRM, exit_handler_aix)
-    # signal.alarm(max_capture_time)
-    # tcpdump -i en8 -s 1500 -c1 -w output_tcpdump.alex ether proto 0x88cc
-    process = subprocess.Popen(['tcpdump', '-i', interface, '-s', '1500', '-c1', '-w', '/tmp/'+interface+'outfile', 'ether', 'proto', '0x88cc'])
+#snoop -o christian_ist_eine_gurke.out -s 1500 -c 1 -x 0 -d e1000g3 ethertype 0x88cc
+    process = subprocess.Popen(['snoop', '-o', '/tmp/'+interface+'outfile', '-s', '1500', '-c', '1', '-x', '0', '-d', interface, 'ethertype', '0x88cc'])
     time.sleep(62)
     if process.poll() is None:
         process.terminate()
@@ -252,6 +248,7 @@ def main():
     evaluate_Function = {
         'Linux': evaluate_linux,
         'AIX': evaluate_aix,
+        'SunOS': evaluate_solaris,
     }
 
     processes = [Process(target=evaluate_Function[os_name], args=(interface, max_capture_time)) for interface in networkname_list] 
