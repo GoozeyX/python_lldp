@@ -1,16 +1,17 @@
 import os, sys
 import socket
 import struct
-import binascii
+# import binascii
 import subprocess
 import re
 import fcntl
 import time
 import signal
-from threading import Thread
-import threading
-from multiprocessing import Process, Queue
+# from threading import Thread
+# import threading
+from multiprocessing import Process
 
+#There is a really good chance this cannot be loaded on AIX and Solaris (also not needed due to us not using raw sockets)
 try:
     import ctypes
     class ifreq(ctypes.Structure):
@@ -18,7 +19,7 @@ try:
                     ("ifr_flags", ctypes.c_short)]
 except (ImportError, NameError) as e:
     print "Meh"
-
+#Taken from the C Header Files 
 ETH_P_ALL = 0x0003
 IFF_PROMISC = 0x100
 SIOCGIFFLAGS = 0x8913
@@ -38,6 +39,20 @@ def get_networklist(osnameonly=None):
         interface_list = re.findall(r"^(en\d*)\s+Available.*$", str(output), re.M)
         return interface_list
 
+    def get_solaris_interfacenames():
+        osrelease = subprocess.Popen("uname -r", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0].strip()
+        if osrelease == "5.10":
+            output = subprocess.Popen("dladm show-dev -p", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0]
+            interface_list = [line.split()[0] for line in output.rstrip().split('\n')]
+        elif osrelease == "5.11":
+            output = subprocess.Popen("dladm show-phys -p -o link", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0]
+            interface_list = [line.split()[0] for line in output.rstrip().split('\n')]
+        else:
+            print "something went wrong here..."
+
+        return interface_list
+
+
     if osnameonly is None:
         return {
             'Linux': get_linux_interfacenames,
@@ -45,7 +60,7 @@ def get_networklist(osnameonly=None):
         }[osname]()
     else:
         return osname
-    # pytho ncase switch http://stackoverflow.com/questions/60208/replacements-for-switch-statement-in-python
+    # python case switch http://stackoverflow.com/questions/60208/replacements-for-switch-statement-in-python
 
 # Enable promiscuous mode from http://stackoverflow.com/a/6072625
 def promiscuous_mode(interface, sock, enable=False):
@@ -59,10 +74,47 @@ def promiscuous_mode(interface, sock, enable=False):
     fcntl.ioctl(sock.fileno(), SIOCSIFFLAGS, ifr)
 
 def evaluate_aix(interface, max_capture_time):
-# figure out a way to track subprocess calls and their pid and kill them when exiting, also google "at exit" signals because alarm can work incorrectly when buffer overflow occur
-    signal.signal(signal.SIGINT, exit_handler_aix)
-    signal.signal(signal.SIGALRM, exit_handler_aix)
-    signal.alarm(max_capture_time)
+# figure out a way to track subprocess calls and
+    # signal.signal(signal.SIGINT, exit_handler_aix)
+    # signal.signal(signal.SIGALRM, exit_handler_aix)
+    # signal.alarm(max_capture_time)
+    # tcpdump -i en8 -s 1500 -c1 -w output_tcpdump.alex ether proto 0x88cc
+    process = subprocess.Popen(['tcpdump', '-i', interface, '-s', '1500', '-c1', '-w', '/tmp/'+interface+'outfile', 'ether', 'proto', '0x88cc'])
+    time.sleep(62)
+    if process.poll() is None:
+        process.terminate()
+    time.sleep(3)
+    if process.poll() is None:
+        process.kill()
+        
+    with open("/tmp/"+interface+"outfile") as f:
+        f.seek(40)
+        data = f.read()
+        data = data[14:]
+        VLAN_ID, Switch_Name, Port_Description, Ethernet_Port_Id = parse_lldp_packet_frames(data)
+    path = "/opt/sysdoc/lldp_data/"
+    if not os.path.exists("/opt/sysdoc/lldp_data"):
+        os.makedirs(path, mode=0755)
+        
+    with open(path+interface, 'w') as f: #TODO write mode 
+        context = {
+            "vlanid": VLAN_ID,
+            "ethernetportid": Ethernet_Port_Id,
+            "portdescription": Port_Description,
+            "switchname": Switch_Name,
+            }
+        template = """VLANID={vlanid}
+ETHERNETPORTID={ethernetportid}
+PORTDESCRIPTION={portdescription}
+SWITCHNAME={switchname}"""
+        
+        f.write(template.format(**context))
+
+def evaluate_solaris(interface, max_capture_time):
+# figure out a way to track subprocess calls and
+    # signal.signal(signal.SIGINT, exit_handler_aix)
+    # signal.signal(signal.SIGALRM, exit_handler_aix)
+    # signal.alarm(max_capture_time)
     # tcpdump -i en8 -s 1500 -c1 -w output_tcpdump.alex ether proto 0x88cc
     process = subprocess.Popen(['tcpdump', '-i', interface, '-s', '1500', '-c1', '-w', '/tmp/'+interface+'outfile', 'ether', 'proto', '0x88cc'])
     time.sleep(62)
@@ -208,18 +260,6 @@ def main():
         # x.daemon = True Bad idea really... 
         x.start()
 
-
-######## Threading template pasta #############
-    # for interface in networkname_list:
-    #     t = Thread(target=evaluate_Function[os_name], args=(interface, max_capture_time))
-    #     t.setDaemon(True)
-    #     t.start()
-
-    # print "starting join now"
-    # t.join(3)
-    # killtimer()
-    # sys.exit(0)
-######## END Threading template pasta #############
 def exit_handler(signum, frame):
     """ Exit signal handler """
 
