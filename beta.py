@@ -49,7 +49,6 @@ def get_networklist(osnameonly=None):
             interface_list = [line.split()[0] for line in output.rstrip().split('\n')]
         else:
             print "something went wrong here..."
-
         return interface_list
 
 
@@ -57,6 +56,7 @@ def get_networklist(osnameonly=None):
         return {
             'Linux': get_linux_interfacenames,
             'AIX': get_aix_interfacenames,
+            'SunOS': get_solaris_interfacenames,
         }[osname]()
     else:
         return osname
