@@ -29,7 +29,7 @@ SIOCSIFFLAGS = 0x8914
 def get_networklist(osnameonly=None):
     """Get Operating system type so that we can choose which method to use to get the LLDP data"""
     osname = subprocess.Popen("uname -s", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0].strip()
-    print osname
+    # print osname
     def get_linux_interfacenames():
         interface_list = os.listdir("/sys/class/net")
         return interface_list
@@ -95,7 +95,8 @@ def evaluate_aix(interface, max_capture_time):
     path = "/opt/sysdoc/lldp_data/"
     if not os.path.exists("/opt/sysdoc/lldp_data"):
         os.makedirs(path, mode=0755)
-        
+
+    interfacestring = interface[:2] + 't' + interface[2:]
     with open(path+interface, 'w') as f: #TODO write mode 
         context = {
             "vlanid": VLAN_ID,
@@ -145,7 +146,7 @@ SWITCHNAME={switchname}"""
 
 
 def evaluate_linux(interface, max_capture_time):
-    print "inside thread now"
+    # print "inside thread now"
     rawSocket = socket.socket(17, socket.SOCK_RAW, socket.htons(0x0003))
     rawSocket.bind((interface, ETH_P_ALL))
 
