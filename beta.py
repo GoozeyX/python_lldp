@@ -97,7 +97,7 @@ def evaluate_aix(interface, max_capture_time):
         os.makedirs(path, mode=0755)
 
     interfacestring = interface[:2] + 't' + interface[2:]
-    with open(path+interface, 'w') as f: #TODO write mode 
+    with open(path+interfacestring, 'w') as f: #TODO write mode 
         context = {
             "vlanid": VLAN_ID,
             "ethernetportid": Ethernet_Port_Id,
@@ -222,9 +222,13 @@ def parse_lldp_packet_frames(lldpPayload):
             break
         else:
             # print tlv_type
-            tlv_subtype = "" if tlv_type is 4 else struct.unpack("!B", lldpDU[0:1])
-            startbyte = 0 if tlv_type is 4 else 1
+            # tlv_subtype = "" if tlv_type is 4 else struct.unpack("!B", lldpDU[0:1])
+            # startbyte = 0 if tlv_type is 4 else 1
+            # tlv_datafield = lldpDU[startbyte:tlv_len]
+            tlv_subtype = struct.unpack("!B", lldpDU[0:1]) if tlv_type is 2 else ""
+            startbyte = 1 if tlv_type is 2 else 0
             tlv_datafield = lldpDU[startbyte:tlv_len]
+
 
         if tlv_type == 4:
             Port_Description = tlv_datafield
