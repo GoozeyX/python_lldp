@@ -29,7 +29,7 @@ SIOCSIFFLAGS = 0x8914
 def get_networklist(osnameonly=None):
     """Get Operating system type so that we can choose which method to use to get the LLDP data"""
     osname = subprocess.Popen("uname -s", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0].strip()
-    # print osname
+    
     def get_linux_interfacenames():
         interface_list = os.listdir("/sys/class/net")
         return interface_list
@@ -146,7 +146,6 @@ SWITCHNAME={switchname}"""
 
 
 def evaluate_linux(interface, max_capture_time):
-    # print "inside thread now"
     rawSocket = socket.socket(17, socket.SOCK_RAW, socket.htons(0x0003))
     rawSocket.bind((interface, ETH_P_ALL))
 
@@ -170,7 +169,6 @@ def evaluate_linux(interface, max_capture_time):
         break
     promiscuous_mode(interface, rawSocket, False)
 
-    # return VLAN_ID, Switch_Name, Port_Description, Ethernet_Port_Id
     path = "/opt/sysdoc/lldp_data/"
 
     if not os.path.exists("/opt/sysdoc/lldp_data"):
@@ -191,7 +189,6 @@ SWITCHNAME={switchname}"""
         f.write(template.format(**context))
 
 
-        # write(template.format(**context))
 def parse_lldp_packet_frames(lldpPayload):
     Switch_Name = None
     VLAN_ID = None
@@ -221,10 +218,6 @@ def parse_lldp_packet_frames(lldpPayload):
             print "TLV Type is ZERO, Breaking the while loop"
             break
         else:
-            # print tlv_type
-            # tlv_subtype = "" if tlv_type is 4 else struct.unpack("!B", lldpDU[0:1])
-            # startbyte = 0 if tlv_type is 4 else 1
-            # tlv_datafield = lldpDU[startbyte:tlv_len]
             tlv_subtype = struct.unpack("!B", lldpDU[0:1]) if tlv_type is 2 else ""
             startbyte = 1 if tlv_type is 2 else 0
             tlv_datafield = lldpDU[startbyte:tlv_len]
@@ -249,7 +242,6 @@ def main():
     max_capture_time = 70
     networkname_list = get_networklist()
     os_name = get_networklist(osnameonly=True)
-    # print os_name
     evaluate_Function = {
         'Linux': evaluate_linux,
         'AIX': evaluate_aix,
@@ -257,9 +249,7 @@ def main():
     }
 
     processes = [Process(target=evaluate_Function[os_name], args=(interface, max_capture_time)) for interface in networkname_list] 
-    print processes
     for x in processes:
-        # x.daemon = True Bad idea really... 
         x.start()
 
 def exit_handler(signum, frame):
@@ -277,9 +267,6 @@ def exit_handler_aix(signum, frame):
     print "Aborting AIX"
     sys.exit(0)
 
-# def killtimer():
-#     import time
-#     time.sleep(3)
 
 
 if __name__ == '__main__':
