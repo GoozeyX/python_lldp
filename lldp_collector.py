@@ -148,25 +148,29 @@ SWITCHNAME={switchname}"""
 def evaluate_linux(interface, max_capture_time):
     rawSocket = socket.socket(17, socket.SOCK_RAW, socket.htons(0x0003))
     rawSocket.bind((interface, ETH_P_ALL))
-
     promiscuous_mode(interface, rawSocket, True)
     signal.signal(signal.SIGINT, exit_handler)
     signal.signal(signal.SIGALRM, exit_handler)
     signal.alarm(max_capture_time)
     while True:
-        packet = rawSocket.recvfrom(65565)
-        packet = packet[0]
-        lldpPayload = packet[14:]
-        ethernetHeaderTotal = packet[0:14]
-        ethernetHeaderUnpacked = struct.unpack("!6s6s2s", ethernetHeaderTotal)
-        ethernetHeaderProtocol = ethernetHeaderUnpacked[2]
+        try:
+            packet = rawSocket.recvfrom(65565)
+            packet = packet[0]
+            lldpPayload = packet[14:]
+            ethernetHeaderTotal = packet[0:14]
+            ethernetHeaderUnpacked = struct.unpack("!6s6s2s", ethernetHeaderTotal)
+            ethernetHeaderProtocol = ethernetHeaderUnpacked[2]
 
-        if ethernetHeaderProtocol != '\x88\xCC':
-            continue
+            if ethernetHeaderProtocol != '\x88\xCC':
+                continue
 
-        VLAN_ID, Switch_Name, Port_Description, Ethernet_Port_Id = parse_lldp_packet_frames(lldpPayload)
+            VLAN_ID, Switch_Name, Port_Description, Ethernet_Port_Id = parse_lldp_packet_frames(lldpPayload)
 
-        break
+            break
+        except socket.error as msg:
+            print "Error occured with interface %s:\n%s" % (interface, msg)
+
+
     promiscuous_mode(interface, rawSocket, False)
 
     path = "/opt/sysdoc/lldp_data/"
